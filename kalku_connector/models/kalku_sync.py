@@ -190,6 +190,10 @@ class KalkuSync(models.AbstractModel):
             if isinstance(exc, KalkuError):
                 message, errors = exc.message, exc.errors
                 _logger.info("Kalku sync failed: %s", message)
+            elif isinstance(exc, UserError):
+                # A setting Odoo cannot honour (e.g. orders without the Sales app).
+                message, errors = exc.args[0], None
+                _logger.info("Kalku sync failed: %s", message)
             else:
                 message, errors = str(exc), None
                 _logger.exception("Kalku sync failed.")

@@ -381,6 +381,19 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertEqual(log.state, "failed")
         self.assertEqual(log.error, "boom")
 
+    def test_odoo_refusal_fails_the_run_without_a_traceback(self):
+        refusal = UserError("The Sales app is not installed: send sales from invoices instead.")
+        Readers = type(self.env["kalku.readers"])
+        fake = FakeKalku()
+        with patch.object(Readers, "read_sales", side_effect=refusal), self.assertNoLogs(
+            "odoo.addons.kalku_connector.models.kalku_sync", "ERROR"
+        ):
+            self.assertIsNone(self.sync(fake, method="run_scheduled"))
+        log = self.last_log()
+        self.assertEqual(log.state, "failed")
+        self.assertEqual(log.error, refusal.args[0])
+        self.assertEqual(fake.payloads(COMPLETE)[0]["status"], "failed")
+
     def test_cron_without_configuration_does_nothing(self):
         self.configure(url="")
         fake = FakeKalku()
