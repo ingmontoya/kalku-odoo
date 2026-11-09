@@ -1,3 +1,7 @@
+# Tests (from the repository root):
+#   docker compose run --rm odoo odoo -d kalku_test -i kalku_connector,sale_stock \
+#     --test-enable --test-tags /kalku_connector --stop-after-init --without-demo=False
+#   docker compose down -v
 services:
   db:
     image: postgres:16

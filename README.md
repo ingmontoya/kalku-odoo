@@ -1,60 +1,73 @@
 # Kalku Connector
 
-Odoo 18 module (LGPL-3) that reads sales, stock and supplier lead times from
-Odoo and sends them to [Kalku](https://kalku.co), a demand-forecasting and
-inventory-planning service.
+Módulo de Odoo 18 (LGPL-3) que lee las ventas, el stock y los tiempos de entrega
+de los proveedores en Odoo y los envía a [Kalku](https://kalku.co), un servicio
+de pronóstico de demanda y planeación de inventario.
 
-## What it does
+## Qué hace
 
-- Sends sales (sales orders or customer invoices), stock per warehouse and
-  supplier lead times to your Kalku account.
-- The forecast and the reorder points are computed in Kalku. This module only
-  reads your Odoo and sends the data; it does not forecast anything.
-- It never writes to Odoo core models. It stores its settings as
-  `ir.config_parameter` keys under `kalku.*` and keeps its own sync log
-  (`kalku.sync.log`, Inventory > Configuration > Kalku > Sync log).
-- Translations: `i18n/kalku_connector.pot` is exported from Odoo; `es.po` is
-  derived from it.
+- Envía a tu cuenta de Kalku las ventas (pedidos de venta o facturas de
+  cliente), el stock por almacén y los tiempos de entrega de los proveedores.
+- El pronóstico y los puntos de reorden se calculan en Kalku. Este módulo solo
+  lee tu Odoo y envía los datos; no pronostica nada.
+- Nunca escribe en los modelos del núcleo de Odoo. Guarda su configuración como
+  claves de `ir.config_parameter` bajo `kalku.*` y lleva su propio registro de
+  sincronización (`kalku.sync.log`, Inventario > Configuración > Kalku >
+  Registro de sincronización).
+- Traducciones: `i18n/kalku_connector.pot` se exporta desde Odoo; `es.po` se
+  deriva de él.
 
-## Data that leaves Odoo
+## Datos que salen de Odoo
 
-Using this module requires a Kalku account (an external service). It sends:
+Usar este módulo requiere una cuenta de Kalku (un servicio externo). Envía:
 
-- Sales lines: date, document number, product internal reference and name,
-  quantity, untaxed amount, unit price and warehouse code.
-- Customer and supplier names with their tax ID (VAT), used as identifiers.
-- Stock per product.
-- Supplier lead time, minimum quantity and price.
+- Líneas de venta: fecha, número de documento, referencia interna y nombre del
+  producto, cantidad, importe sin impuestos, precio unitario y código del
+  almacén.
+- Nombres de clientes y proveedores con su número de identificación tributaria (VAT),
+  usada como identificador.
+- Stock por producto.
+- Tiempo de entrega, cantidad mínima y precio de cada proveedor.
 
-The module's only writes in Odoo are its settings and its own sync log.
+Los importes y los precios se envían en la moneda del documento, sin
+conversión.
 
-## Limits
+Las únicas escrituras del módulo en Odoo son su configuración y su propio
+registro de sincronización.
 
-- **Odoo Online (SaaS) is not supported**: it needs a custom module, which Odoo
-  Online does not allow. Odoo.sh and on-premise installs work.
-- Products without an internal reference (`default_code`) are skipped and
-  reported in the sync log. Services are skipped too.
-- The Kalku URL must use https (plain http is accepted only for localhost and
-  host.docker.internal during development).
+## Límites
 
-## Setup
+- **Odoo Online (SaaS) no es compatible**: requiere un módulo a medida, y Odoo
+  Online no lo permite. Odoo.sh y las instalaciones propias (on-premise) sí
+  funcionan.
+- Los productos sin referencia interna (`default_code`) se omiten y se reportan
+  en el registro de sincronización. Los servicios también se omiten.
+- La URL de Kalku debe usar https (http solo se acepta para localhost y
+  host.docker.internal durante el desarrollo).
 
-1. In Kalku go to Configuración > Integraciones > "Odoo (módulo)" and press
+## Configuración
+
+1. En Kalku ve a Configuración > Integraciones > "Odoo (módulo)" y pulsa
    "Generar token".
-2. In Odoo go to Settings > Kalku, paste the URL of your account and the token,
-   and choose what to send.
+2. En Odoo ve a Ajustes > Kalku, pega la URL de tu cuenta y el token, y elige
+   qué enviar.
 
-The token is stored in `ir.config_parameter` (`kalku.token`) and is never
-shown again after saving.
+El token se guarda en `ir.config_parameter` (`kalku.token`) y no se vuelve a
+mostrar después de guardarlo.
 
-## Development
+## Desarrollo
+
+Las pruebas de ventas necesitan `sale_stock` (el almacén del pedido), que el
+módulo no declara como dependencia; por eso se instala junto con él:
 
 ```bash
-docker compose run --rm odoo odoo -d kalku_test -i kalku_connector \
-  --test-enable --test-tags /kalku_connector --stop-after-init
+docker compose run --rm odoo odoo -d kalku_test -i kalku_connector,sale_stock \
+  --test-enable --test-tags /kalku_connector --stop-after-init --without-demo=False
 docker compose down -v
 ```
 
-## License
+Sin `sale_stock` las pruebas de ventas se marcan como omitidas.
 
-LGPL-3. See `LICENSE`.
+## Licencia
+
+LGPL-3. Consulta `LICENSE`.

@@ -1,4 +1,6 @@
-from datetime import date, datetime
+from datetime import date, timedelta
+
+from odoo import fields
 
 from odoo.exceptions import UserError
 from odoo.tests import tagged
@@ -25,6 +27,8 @@ class TestKalkuReaders(KalkuFixtureCase):
 
     @requires_sale_stock
     def test_sales_orders_match_fixture(self):
+        # The order carries tax, so matching the fixture proves amount is untaxed.
+        self.assertTrue(self.order_42.amount_tax)
         result = self.readers().read_sales("orders", None)
         self._assert_sales_match(result, self.fixture["sales_orders"])
         self.assertEqual(sorted(result["documents"]), ["S00042", "S00043"])
@@ -101,15 +105,21 @@ class TestKalkuReaders(KalkuFixtureCase):
 
     @requires_sale_stock
     def test_incremental_window(self):
-        # Records created in one transaction share write_date; age S00042 by hand.
+        # Records created in one transaction share write_date; set them by hand.
+        since = fields.Datetime.now() - timedelta(days=1)
         self.env.cr.execute(
             "UPDATE sale_order SET write_date = %s WHERE id = %s",
-            ["2026-10-03 16:00:00", self.order_42.id],
+            [since - timedelta(seconds=1), self.order_42.id],
+        )
+        self.env.cr.execute(
+            "UPDATE sale_order SET write_date = %s WHERE id = %s",
+            [since, self.order_43.id],
         )
         self.env.invalidate_all()
-        result = self.readers().read_sales("orders", datetime(2026, 11, 1))
+        result = self.readers().read_sales("orders", since)
         self.assertNotIn("S00042", result["documents"])
         self.assertNotIn("S00042", [row["doc_number"] for row in result["rows"]])
+        # write_date == since is inside the window.
         self.assertEqual(result["retract"], ["S00043"])
         full = self.readers().read_sales("orders", None)
         self.assertIn("S00042", full["documents"])
@@ -120,7 +130,114 @@ class TestKalkuReaders(KalkuFixtureCase):
         self.assertEqual(readers.resolve_source("invoices"), "invoices")
         expected = "orders" if "sale.order" in self.env else "invoices"
         self.assertEqual(readers.resolve_source("auto"), expected)
+        with self.assertRaises(UserError):
+            readers.resolve_source("quotes")
 
     def test_unknown_source_is_refused(self):
         with self.assertRaises(UserError):
             self.readers().read_sales("quotes", None)
+
+    @requires_sale_stock
+    def test_variant_name_carries_its_attributes(self):
+        size = self.env["product.attribute"].create(
+            {"name": "Talla", "value_ids": [(0, 0, {"name": "S"}), (0, 0, {"name": "M"})]}
+        )
+        template = self.env["product.template"].create(
+            {
+                "name": "Polo",
+                "type": "consu",
+                "is_storable": True,
+                "attribute_line_ids": [
+                    (0, 0, {"attribute_id": size.id, "value_ids": [(6, 0, size.value_ids.ids)]})
+                ],
+            }
+        )
+        variants = {v.product_template_attribute_value_ids.name: v for v in template.product_variant_ids}
+        variants["S"].default_code = "POL-S"
+        variants["M"].default_code = "POL-M"
+        self._order(
+            self.company_a,
+            "S00045",
+            self.customer,
+            self.warehouse_a,
+            "2026-10-08 15:00:00",
+            [(variants["S"], 1, 20000), (variants["M"], 2, 20000)],
+        )
+        rows = [row for row in self.readers().read_sales("orders", None)["rows"] if row["doc_number"] == "S00045"]
+        self.assertEqual(
+            sorted((row["product_key"], row["product_name"]) for row in rows),
+            [("POL-M", "Polo (M)"), ("POL-S", "Polo (S)")],
+        )
+
+    def _supplier_line(self, partner, product, **values):
+        return self.env["product.supplierinfo"].create(
+            dict({"partner_id": partner.id, "product_tmpl_id": product.product_tmpl_id.id}, **values)
+        )
+
+    def _supplier_rows(self, product_key):
+        rows = self.readers().read_supplier_terms()["rows"]
+        return [row for row in rows if row["product_key"] == product_key]
+
+    def test_one_row_per_product_and_supplier(self):
+        product = self.env["product.product"].create(
+            {"name": "Chaqueta", "default_code": "CAM-010", "type": "consu", "is_storable": True}
+        )
+        self._supplier_line(self.supplier_one, product, sequence=1, min_qty=0, price=100, delay=5)
+        self._supplier_line(self.supplier_one, product, sequence=3, min_qty=100, price=90, delay=7)
+        # Another contact of the same company is the same supplier.
+        contact = self.env["res.partner"].create(
+            {"name": "Ventas Proveedor Uno", "parent_id": self.supplier_one.id}
+        )
+        self._supplier_line(contact, product, sequence=4, min_qty=1, price=80, delay=2)
+        rows = self._supplier_rows("CAM-010")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["supplier_key"], "800111222")
+        self.assertTrue(rows[0]["is_preferred"])
+        self.assertEqual(rows[0]["lead_time_days"], 5)
+        self.assertEqual(rows[0]["unit_price"], 100)
+        self.assertIsNone(rows[0]["min_order_qty"])
+
+    def test_supplier_lines_out_of_dates_are_ignored(self):
+        product = self.env["product.product"].create(
+            {"name": "Chaleco", "default_code": "CAM-011", "type": "consu", "is_storable": True}
+        )
+        today = fields.Date.context_today(self.env.user)
+        self._supplier_line(self.supplier_one, product, sequence=1, delay=1, date_end=today - timedelta(days=1))
+        self._supplier_line(self.supplier_two, product, sequence=2, delay=2, date_start=today + timedelta(days=1))
+        current = self.env["res.partner"].create({"name": "Proveedor Vigente", "vat": "800333444"})
+        self._supplier_line(current, product, sequence=3, delay=3, date_start=today, date_end=today)
+        rows = self._supplier_rows("CAM-011")
+        self.assertEqual([row["supplier_key"] for row in rows], ["800333444"])
+        self.assertTrue(rows[0]["is_preferred"])
+
+    def test_archived_suppliers_are_ignored(self):
+        product = self.env["product.product"].create(
+            {"name": "Bufanda", "default_code": "CAM-012", "type": "consu", "is_storable": True}
+        )
+        archived = self.env["res.partner"].create({"name": "Proveedor Archivado", "vat": "800555666"})
+        archived_company = self.env["res.partner"].create(
+            {"name": "Empresa Archivada", "vat": "800777888", "is_company": True}
+        )
+        active_contact = self.env["res.partner"].create(
+            {"name": "Contacto Activo", "parent_id": archived_company.id}
+        )
+        self._supplier_line(archived, product, sequence=1, delay=1)
+        self._supplier_line(active_contact, product, sequence=2, delay=2)
+        self._supplier_line(self.supplier_one, product, sequence=3, delay=3)
+        archived.active = False
+        archived_company.active = False
+        self.assertTrue(active_contact.active)
+        rows = self._supplier_rows("CAM-012")
+        self.assertEqual([row["supplier_key"] for row in rows], ["800111222"])
+        self.assertTrue(rows[0]["is_preferred"])
+
+    def test_stock_ignores_goods_without_stock_tracking(self):
+        self.env["product.product"].create(
+            {"name": "Bolsa", "type": "consu", "is_storable": False}
+        )
+        self.env["product.product"].create(
+            {"name": "Etiqueta", "default_code": "ETQ-001", "type": "consu", "is_storable": False}
+        )
+        result = self.readers().read_stock(date(2026, 11, 8))
+        self.assertEqual(result["skipped"], self.fixture["inventory"]["skipped"])
+        self.assertNotIn("ETQ-001", [row["product_key"] for row in result["rows"]])

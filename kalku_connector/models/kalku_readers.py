@@ -4,7 +4,7 @@ Everything is read for ``self.env.company`` only. The row keys and values are
 pinned by ``tests/fixtures/odoo-mapping.json``, shared with Kalku's test suite.
 """
 
-from odoo import _, api, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 from .compat import CONFIRMED_ORDER_STATES, is_service, is_storable
@@ -19,6 +19,12 @@ def _round(value):
 def _product_key(product):
     """The product's internal reference without surrounding spaces, or None."""
     return (product.default_code or "").strip() or None
+
+
+def _product_name(product):
+    """The variant's name with its attribute values ("Camisa (S)"), without the
+    internal reference that Odoo prefixes by default."""
+    return product.with_context(display_default_code=False).display_name
 
 
 def _partner_identity(partner):
@@ -36,7 +42,9 @@ class KalkuReaders(models.AbstractModel):
     def resolve_source(self, setting):
         if setting in SALES_SOURCES:
             return setting
-        return "orders" if "sale.order" in self.env else "invoices"
+        if setting == "auto":
+            return "orders" if "sale.order" in self.env else "invoices"
+        raise UserError(_("Unknown sales source: %s", setting))
 
     # Sales -------------------------------------------------------------
 
@@ -72,7 +80,7 @@ class KalkuReaders(models.AbstractModel):
                     if location is None:
                         skipped["no_warehouse_code"] += 1
                     doc_rows.append(
-                        dict(header, product_key=key, product_name=product.name,
+                        dict(header, product_key=key, product_name=_product_name(product),
                              location=location, **values)
                     )
             if doc_rows:
@@ -187,8 +195,12 @@ class KalkuReaders(models.AbstractModel):
         )
         keyed = []
         for product in products:
+            # Services are counted; other goods without stock tracking are not
+            # inventory and are left out silently.
+            if not is_service(product) and not is_storable(product):
+                continue
             key = self._skip_reason(product, skipped)
-            if key is not None and is_storable(product):
+            if key is not None:
                 keyed.append((product, key))
 
         on_hand = {}
@@ -218,21 +230,35 @@ class KalkuReaders(models.AbstractModel):
 
     @api.model
     def read_supplier_terms(self):
-        """One row per (supplier price line, product). A line set on a
-        template applies to each of its variants. The preferred supplier of a
-        product is its line with the lowest sequence (ties: lowest id)."""
+        """One row per (product, supplier). A line set on a template applies to
+        each of its variants. Lines are read by lowest sequence, then id: the
+        first line of a product is its preferred supplier, and the first line of
+        a (product, supplier) pair stands for that supplier (price tiers, other
+        contacts of the same company and template lines under a variant line
+        are not sent again). Lines outside their validity dates and lines of
+        archived suppliers are ignored."""
         company = self.env.company
+        today = fields.Date.context_today(self)
         skipped = {"no_default_code": 0, "service": 0}
         infos = self.env["product.supplierinfo"].search(
             [("company_id", "in", (False, company.id))], order="sequence, id"
         )
-        rows, preferred_seen = [], set()
+        rows, preferred_seen, pairs_seen = [], set(), set()
         for info in infos:
+            if (info.date_start and info.date_start > today) or (
+                info.date_end and info.date_end < today
+            ):
+                continue
+            if not info.partner_id.active or not info.partner_id.commercial_partner_id.active:
+                continue
             products = info.product_id or info.product_tmpl_id.product_variant_ids
             supplier_key, vat, supplier = _partner_identity(info.partner_id)
             for product in products:
                 if not product.active or product.company_id not in (company, company.browse()):
                     continue
+                if (product.id, supplier_key) in pairs_seen:
+                    continue
+                pairs_seen.add((product.id, supplier_key))
                 key = self._skip_reason(product, skipped)
                 if key is None:
                     continue
