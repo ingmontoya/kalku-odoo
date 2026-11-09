@@ -7,13 +7,15 @@ de pronóstico de demanda y planeación de inventario.
 ## Qué hace
 
 - Envía a tu cuenta de Kalku las ventas (pedidos de venta o facturas de
-  cliente), el stock por almacén y los tiempos de entrega de los proveedores.
+  cliente), el stock de cada producto (la suma de todos los almacenes) y los
+  tiempos de entrega de los proveedores.
 - El pronóstico y los puntos de reorden se calculan en Kalku. Este módulo solo
   lee tu Odoo y envía los datos; no pronostica nada.
-- Nunca escribe en los modelos del núcleo de Odoo. Guarda su configuración como
-  claves de `ir.config_parameter` bajo `kalku.*` y lleva su propio registro de
-  sincronización (`kalku.sync.log`, Inventario > Configuración > Kalku >
-  Registro de sincronización).
+- Solo escribe en Odoo su propia configuración (claves de `ir.config_parameter`
+  bajo `kalku.*`), su registro de sincronización (`kalku.sync.log`, Inventario >
+  Configuración > Kalku > Registro de sincronización) y el aviso que pone en
+  marcha su acción programada cuando una sincronización se deja para después.
+  No cambia ningún otro dato de Odoo.
 - Traducciones: `i18n/kalku_connector.pot` se exporta desde Odoo; `es.po` se
   deriva de él.
 
@@ -25,15 +27,17 @@ Usar este módulo requiere una cuenta de Kalku (un servicio externo). Envía:
   producto, cantidad, importe sin impuestos, precio unitario y código del
   almacén.
 - Nombres de clientes y proveedores con su número de identificación tributaria (VAT),
-  usada como identificador.
-- Stock por producto.
+  usada como identificador. Un cliente o proveedor sin VAT se identifica como
+  `ODOO-<id>`, con el id interno de Odoo.
+- Stock por producto (la suma de todos los almacenes).
 - Tiempo de entrega, cantidad mínima y precio de cada proveedor.
+- Los números de los documentos que dejaron de estar confirmados (borradores y
+  cancelados), para que Kalku retire esas ventas si ya las tenía.
+- Al final de cada sincronización, un resumen (cuántos documentos y filas se
+  enviaron y cuántos se omitieron) y, si falló, el texto del error.
 
 Los importes y los precios se envían en la moneda del documento, sin
 conversión.
-
-Las únicas escrituras del módulo en Odoo son su configuración y su propio
-registro de sincronización.
 
 ## Límites
 
@@ -42,6 +46,9 @@ registro de sincronización.
   funcionan.
 - Los productos sin referencia interna (`default_code`) se omiten y se reportan
   en el registro de sincronización. Los servicios también se omiten.
+- Las líneas de venta de un almacén sin código sí se envían, al centro por
+  defecto de Kalku; el registro las cuenta en "Sin código de almacén (centro por
+  defecto)".
 - La URL de Kalku debe usar https (http solo se acepta para localhost y
   host.docker.internal durante el desarrollo).
 
@@ -72,11 +79,17 @@ respeta aunque después se sincronice con otra empresa activa.
   de sincronización.
 - La acción programada "Kalku: sincronización" corre una vez al día (la primera
   vez a las 02:30 UTC del día siguiente a la instalación; la hora se cambia en
-  Ajustes > Técnico > Acciones programadas). Envía las ventas, el stock y los
-  tiempos de entrega de la empresa de su usuario.
+  Ajustes > Técnico > Acciones programadas). Envía, de la empresa elegida en el
+  campo "Empresa" de los ajustes, solo los datos marcados en "Qué enviar".
 - La primera sincronización envía todas las ventas. Las siguientes envían los
   documentos modificados desde la última sincronización exitosa, con 24 horas de
   margen. El stock y los tiempos de entrega se envían completos cada vez.
+- "Reenviar todas las ventas" vuelve a enviar todos los documentos de venta,
+  como la primera sincronización. Úsalo después de ponerle referencia interna a
+  productos que no la tenían o código a un almacén: esos cambios no modifican los
+  documentos, así que las sincronizaciones normales no los vuelven a leer. Sigue
+  la misma regla que "Sincronizar ahora": hasta 2000 documentos, en el momento;
+  si son más, la acción programada.
 - Si la fuente de las ventas cambia (de facturas a pedidos o al revés), primero
   se retiran en Kalku los documentos de la fuente anterior y luego se envía la
   nueva desde el inicio.
@@ -89,6 +102,9 @@ respeta aunque después se sincronice con otra empresa activa.
   Kalku en curso." Si es la acción programada la que coincide con otra, se salta
   esa vez sin crear fila en el registro y solo deja una línea informativa en el
   log del servidor.
+- Si a la acción programada le falta configuración (la URL, el token, la empresa
+  o algún dato marcado para enviar), deja una fila fallida en el registro con el
+  motivo y no contacta a Kalku.
 - Cada sincronización deja su fila en el registro aunque Odoo la interrumpa. Si
   una queda "En curso" porque Odoo detuvo el proceso, la siguiente la marca como
   fallida.
@@ -112,6 +128,27 @@ Kalku y la siguiente vuelve a empezar desde el principio. Para esa primera vez:
 
 Las sincronizaciones siguientes solo envían los documentos modificados y son
 mucho más cortas.
+
+## Si ya usabas la integración por API de Kalku
+
+Kalku también puede leer tu Odoo por API (Configuración > Integraciones >
+"Odoo"). Si la usabas y pasas a este módulo:
+
+- Primero desconecta esa integración en Kalku: Kalku no deja tener las dos
+  conectadas a la vez.
+- La primera sincronización del módulo es completa y mueve las ventas que ya
+  estaban cargadas en el centro por defecto al centro del almacén de cada
+  documento.
+- La integración por API contaba los productos sin referencia interna por su
+  nombre; el módulo los omite. Cuando el módulo vuelva a enviar esos documentos,
+  su demanda desaparece de Kalku. Ponles referencia interna antes de cambiar si
+  quieres conservarla.
+
+## Desinstalar
+
+Al desinstalar el módulo se borran todas sus claves `kalku.*` de
+`ir.config_parameter`, el token incluido. Revoca también el token en Kalku
+(Configuración > Integraciones > "Odoo (módulo)" > "Revocar token").
 
 ## Desarrollo
 

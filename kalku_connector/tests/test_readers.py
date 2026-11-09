@@ -268,3 +268,36 @@ class TestKalkuReaders(KalkuFixtureCase):
                     self.readers().count_sales(source, None),
                     len(self.readers().read_sales(source, None)["documents"]),
                 )
+
+    @requires_sale_stock
+    def test_sales_values_fit_kalku_limits(self):
+        # Kalku refuses a whole request over one value too long, so the
+        # readers cut each value to Kalku's limit.
+        self.order_42.name = "S" + "4" * 249
+        self.order_43.name = "T" + "3" * 249
+        self.camisa.name = "C" * 300
+        self.customer.name = "N" * 300
+        result = self.readers().read_sales("orders", None)
+        long_42, long_43 = self.order_42.name[:200], self.order_43.name[:200]
+        rows = [row for row in result["rows"] if row["doc_number"] == long_42]
+        self.assertEqual(len(rows), 2)
+        camisa = [row for row in rows if row["product_key"] == "CAM-001"][0]
+        self.assertEqual(camisa["product_name"], "C" * 255)
+        self.assertEqual({row["customer_name"] for row in rows}, {"N" * 255})
+        self.assertEqual(result["retract"], [long_43])
+        self.assertEqual(sorted(result["documents"]), [long_42, long_43])
+
+    def test_supplier_values_fit_kalku_limits(self):
+        self.supplier_one.write({"name": "P" * 300, "vat": "8" * 60})
+        info = self.env["product.supplierinfo"].search(
+            [
+                ("partner_id", "=", self.supplier_one.id),
+                ("product_tmpl_id", "=", self.camisa.product_tmpl_id.id),
+            ]
+        )
+        info.delay = -3
+        rows = [row for row in self._supplier_rows("CAM-001") if row["supplier_key"] == "8" * 60]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["supplier_name"], "P" * 255)
+        self.assertEqual(rows[0]["supplier_id"], "8" * 50)
+        self.assertEqual(rows[0]["lead_time_days"], 0)

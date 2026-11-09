@@ -35,8 +35,9 @@ class KalkuSyncLog(models.Model):
         string="Skipped: no internal reference", readonly=True
     )
     skipped_service = fields.Integer(string="Skipped: services", readonly=True)
+    # These rows are sent, to Kalku's default center: only the warehouse is missing.
     skipped_no_warehouse_code = fields.Integer(
-        string="Skipped: no warehouse code", readonly=True
+        string="Without warehouse code (default center)", readonly=True
     )
     kalku_response = fields.Text(string="Kalku response (JSON)", readonly=True)
     error = fields.Text(readonly=True)
