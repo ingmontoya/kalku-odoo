@@ -138,6 +138,11 @@ msgid "Kalku URL must use https."
 msgstr "La URL de Kalku debe usar https."
 
 #. module: kalku_connector
+#: model:ir.model,name:kalku_connector.model_kalku_readers
+msgid "Kalku canonical row readers"
+msgstr "Lectores de filas canónicas de Kalku"
+
+#. module: kalku_connector
 #: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__kalku_response
 msgid "Kalku response (JSON)"
 msgstr "Respuesta de Kalku (JSON)"
@@ -300,9 +305,21 @@ msgid "Test connection"
 msgstr "Probar conexión"
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_readers.py:0
+msgid "The Sales app is not installed: send sales from invoices instead."
+msgstr "La app de Ventas no está instalada: envía las ventas desde las facturas."
+
+#. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Token"
 msgstr "Token"
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_readers.py:0
+msgid "Unknown sales source: %s"
+msgstr "Fuente de ventas desconocida: %s"
 
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku

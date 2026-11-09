@@ -1,0 +1,108 @@
+{
+    "sales_orders": {
+        "source": "orders",
+        "rows": [
+            {
+                "date": "2026-10-03",
+                "customer_key": "900123456",
+                "customer_name": "Cliente SAS",
+                "product_key": "CAM-001",
+                "product_name": "Camisa",
+                "quantity": 3,
+                "amount": 30000,
+                "unit_price": 10000,
+                "cost": null,
+                "location": "BAQ",
+                "delivery_point": null,
+                "doc_type": null,
+                "doc_number": "S00042"
+            },
+            {
+                "date": "2026-10-03",
+                "customer_key": "900123456",
+                "customer_name": "Cliente SAS",
+                "product_key": "CAM-002",
+                "product_name": "Camiseta",
+                "quantity": 1,
+                "amount": 25000,
+                "unit_price": 25000,
+                "cost": null,
+                "location": "BAQ",
+                "delivery_point": null,
+                "doc_type": null,
+                "doc_number": "S00042"
+            }
+        ],
+        "retract": ["S00043"],
+        "skipped": {"no_default_code": 1, "service": 1, "no_warehouse_code": 0}
+    },
+    "sales_invoices": {
+        "source": "invoices",
+        "rows": [
+            {
+                "date": "2026-10-15",
+                "customer_key": "900123456",
+                "customer_name": "Cliente SAS",
+                "product_key": "CAM-001",
+                "product_name": "Camisa",
+                "quantity": 2,
+                "amount": 20000,
+                "unit_price": 10000,
+                "cost": null,
+                "location": "BAQ",
+                "delivery_point": null,
+                "doc_type": null,
+                "doc_number": "INV/2026/0007"
+            },
+            {
+                "date": "2026-10-20",
+                "customer_key": "900123456",
+                "customer_name": "Cliente SAS",
+                "product_key": "CAM-001",
+                "product_name": "Camisa",
+                "quantity": -1,
+                "amount": -10000,
+                "unit_price": 10000,
+                "cost": null,
+                "location": "BAQ",
+                "delivery_point": null,
+                "doc_type": null,
+                "doc_number": "RINV/2026/0002"
+            }
+        ],
+        "retract": [],
+        "skipped": {"no_default_code": 1, "service": 1, "no_warehouse_code": 0}
+    },
+    "inventory": {
+        "rows": [
+            {"date": "2026-11-08", "product_key": "CAM-001", "quantity": 7},
+            {"date": "2026-11-08", "product_key": "CAM-002", "quantity": 0}
+        ],
+        "skipped": {"no_default_code": 1, "service": 1}
+    },
+    "supplier_terms": {
+        "rows": [
+            {
+                "product_key": "CAM-001",
+                "supplier_key": "800111222",
+                "supplier_name": "Proveedor Uno SAS",
+                "supplier_id": "800111222",
+                "lead_time_days": 5,
+                "min_order_qty": 12,
+                "unit_price": 4200,
+                "is_preferred": true
+            },
+            {
+                "product_key": "CAM-001",
+                "supplier_key": "ODOO-77",
+                "supplier_name": "Proveedor Dos",
+                "supplier_id": null,
+                "lead_time_days": 9,
+                "min_order_qty": null,
+                "unit_price": null,
+                "is_preferred": false
+            }
+        ],
+        "skipped": {"no_default_code": 1, "service": 0}
+    }
+}
