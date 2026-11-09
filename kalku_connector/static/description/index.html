@@ -14,6 +14,14 @@
     <li>Existencias por almacén.</li>
     <li>Plazos de entrega por producto y proveedor.</li>
   </ul>
+  <h3>Qué datos salen de Odoo</h3>
+  <ul>
+    <li>Líneas de venta: fecha, número de documento, referencia interna y nombre del producto, cantidad, importe sin impuestos, precio unitario y código del almacén.</li>
+    <li>Nombre y NIT (VAT) de clientes y proveedores, usados como identificadores.</li>
+    <li>Existencias por producto.</li>
+    <li>Plazo de entrega, cantidad mínima y precio por proveedor.</li>
+  </ul>
+  <p>Estos datos se envían a Kalku, un servicio externo: necesitas una cuenta de Kalku para usar el módulo.</p>
   <h3>Cómo se conecta</h3>
   <ol>
     <li>En Kalku, entra a Configuración &gt; Integraciones &gt; "Odoo (módulo)" y pulsa "Generar token".</li>
@@ -23,7 +31,7 @@
   <ul>
     <li>No funciona en Odoo Online (SaaS): necesita instalar un módulo, y Odoo Online no lo permite.</li>
     <li>Los productos sin referencia interna se omiten y se informan en el registro de sincronización.</li>
-    <li>El módulo no modifica ningún modelo de Odoo; solo guarda sus propios ajustes y su registro.</li>
+    <li>Lo único que el módulo escribe en Odoo son sus ajustes y su propio registro de sincronización; no modifica ningún modelo del núcleo.</li>
     <li>La URL debe usar https.</li>
   </ul>
   <p>Licencia LGPL-3.</p>

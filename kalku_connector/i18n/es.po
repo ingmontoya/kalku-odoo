@@ -5,133 +5,311 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
-"Report-Msgid-Bugs-To: \n"
 "Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: \n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Kalku URL must use https."
-msgstr "La URL de Kalku debe usar https."
-
-msgid "Not implemented yet"
-msgstr "Aún no implementado"
-
-msgid "Kalku URL"
-msgstr "URL de Kalku"
-
-msgid "Kalku token"
-msgstr "Token de Kalku"
-
-msgid "Send sales"
-msgstr "Enviar ventas"
-
-msgid "Send stock"
-msgstr "Enviar existencias"
-
-msgid "Send supplier lead times"
-msgstr "Enviar plazos de entrega de proveedores"
-
-msgid "Sales source"
-msgstr "Fuente de las ventas"
-
-msgid "Automatic"
-msgstr "Automática"
-
-msgid "Sales orders"
-msgstr "Pedidos de venta"
-
-msgid "Customer invoices"
-msgstr "Facturas de cliente"
-
-msgid "Full"
-msgstr "Completa"
-
-msgid "Incremental"
-msgstr "Incremental"
-
-msgid "Sales"
-msgstr "Ventas"
-
-msgid "Stock"
-msgstr "Existencias"
-
-msgid "Supplier terms"
-msgstr "Condiciones de proveedores"
-
-msgid "All"
-msgstr "Todos"
-
-msgid "Running"
-msgstr "En curso"
-
-msgid "Done"
-msgstr "Terminada"
-
-msgid "Failed"
-msgstr "Fallida"
-
-msgid "Skipped: no internal reference"
-msgstr "Omitidos: sin referencia interna"
-
-msgid "Skipped: services"
-msgstr "Omitidos: servicios"
-
-msgid "Skipped: no warehouse code"
-msgstr "Omitidos: sin código de almacén"
-
-msgid "Kalku response (JSON)"
-msgstr "Respuesta de Kalku (JSON)"
-
-msgid "Sync log"
-msgstr "Registro de sincronización"
-
-msgid "Kalku sync log"
-msgstr "Registro de sincronización de Kalku"
-
-msgid "Connection"
-msgstr "Conexión"
-
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Address of your Kalku account, for example https://app.kalku.co"
 msgstr "Dirección de tu cuenta de Kalku, por ejemplo https://app.kalku.co"
 
-msgid "Token"
-msgstr "Token"
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__dataset__all
+msgid "All"
+msgstr "Todos"
 
-msgid "Generate it in Kalku > Configuración > Integraciones > Odoo (módulo) > Generar token. Leave empty to keep the saved one."
-msgstr "Genéralo en Kalku > Configuración > Integraciones > Odoo (módulo) > Generar token. Déjalo vacío para conservar el guardado."
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__res_config_settings__kalku_sales_source__auto
+msgid "Automatic"
+msgstr "Automática"
 
-msgid "Paste the token here"
-msgstr "Pega el token aquí"
-
-msgid "Test connection"
-msgstr "Probar conexión"
-
-msgid "What to send"
-msgstr "Qué enviar"
-
-msgid "Sales documents, to forecast demand by product."
-msgstr "Documentos de venta, para pronosticar la demanda por producto."
-
-msgid "Automatic uses sales orders when the Sales app is installed and customer invoices otherwise."
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Automatic uses sales orders when the Sales app is installed and customer "
+"invoices otherwise."
 msgstr "Automática usa los pedidos de venta si la app de Ventas está instalada y las facturas de cliente en caso contrario."
 
+#. module: kalku_connector
+#: model:ir.model,name:kalku_connector.model_res_config_settings
+msgid "Config Settings"
+msgstr "Ajustes de configuración"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Connection"
+msgstr "Conexión"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__create_date
+msgid "Created on"
+msgstr "Creado el"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Current stock per warehouse."
 msgstr "Existencias actuales por almacén."
 
-msgid "Supplier lead times"
-msgstr "Plazos de entrega de proveedores"
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__res_config_settings__kalku_sales_source__invoices
+msgid "Customer invoices"
+msgstr "Facturas de cliente"
 
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__dataset
+msgid "Dataset"
+msgstr "Conjunto de datos"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__display_name
+msgid "Display Name"
+msgstr "Nombre para mostrar"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__documents_read
+msgid "Documents Read"
+msgstr "Documentos leídos"
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__state__done
+msgid "Done"
+msgstr "Terminada"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__error
+msgid "Error"
+msgstr "Error"
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__state__failed
+msgid "Failed"
+msgstr "Fallida"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__finished_at
+msgid "Finished At"
+msgstr "Terminó"
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__sync_type__full
+msgid "Full"
+msgstr "Completa"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Generate it in Kalku > Settings > Integrations > \"Odoo (módulo)\" > "
+"\"Generar token\". Leave empty to keep the saved one."
+msgstr "Genéralo en Kalku > Configuración > Integraciones > \"Odoo (módulo)\" > \"Generar token\". Déjalo vacío para conservar el guardado."
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__id
+msgid "ID"
+msgstr "ID"
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__sync_type__incremental
+msgid "Incremental"
+msgstr "Incremental"
+
+#. module: kalku_connector
+#: model:ir.ui.menu,name:kalku_connector.menu_kalku_root
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Kalku"
+msgstr "Kalku"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_url
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Kalku URL"
+msgstr "URL de Kalku"
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Kalku URL must use https."
+msgstr "La URL de Kalku debe usar https."
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__kalku_response
+msgid "Kalku response (JSON)"
+msgstr "Respuesta de Kalku (JSON)"
+
+#. module: kalku_connector
+#: model:ir.model,name:kalku_connector.model_kalku_sync_log
+msgid "Kalku sync log"
+msgstr "Registro de sincronización de Kalku"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_token
+msgid "Kalku token"
+msgstr "Token de Kalku"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__write_date
+msgid "Last Updated on"
+msgstr "Última actualización el"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Lead times per product and supplier, for the reorder points."
 msgstr "Plazos de entrega por producto y proveedor, para los puntos de reorden."
 
-msgid "Synchronization"
-msgstr "Sincronización"
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Not implemented yet"
+msgstr "Aún no implementado"
 
-msgid "Products without an internal reference are skipped and reported in the sync log."
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Paste the token here"
+msgstr "Pega el token aquí"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Products without an internal reference are skipped and reported in the sync "
+"log."
 msgstr "Los productos sin referencia interna se omiten y se informan en el registro de sincronización."
 
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__rows_sent
+msgid "Rows Sent"
+msgstr "Filas enviadas"
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__state__running
+msgid "Running"
+msgstr "En curso"
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__dataset__sales
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Sales"
+msgstr "Ventas"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Sales documents, to forecast demand by product."
+msgstr "Documentos de venta, para pronosticar la demanda por producto."
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__res_config_settings__kalku_sales_source__orders
+msgid "Sales orders"
+msgstr "Pedidos de venta"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_sales_source
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Sales source"
+msgstr "Fuente de las ventas"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_sync_sales
+msgid "Send sales"
+msgstr "Enviar ventas"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_sync_stock
+msgid "Send stock"
+msgstr "Enviar existencias"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_sync_supplier_terms
+msgid "Send supplier lead times"
+msgstr "Enviar plazos de entrega de proveedores"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_default_code
+msgid "Skipped: no internal reference"
+msgstr "Omitidos: sin referencia interna"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_warehouse_code
+msgid "Skipped: no warehouse code"
+msgstr "Omitidos: sin código de almacén"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_service
+msgid "Skipped: services"
+msgstr "Omitidos: servicios"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__started_at
+msgid "Started At"
+msgstr "Inició"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__state
+msgid "State"
+msgstr "Estado"
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__dataset__stock
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Stock"
+msgstr "Existencias"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Supplier lead times"
+msgstr "Plazos de entrega de proveedores"
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__dataset__supplier_terms
+msgid "Supplier terms"
+msgstr "Condiciones de proveedores"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__sync_type
+msgid "Sync Type"
+msgstr "Tipo de sincronización"
+
+#. module: kalku_connector
+#: model:ir.actions.act_window,name:kalku_connector.kalku_sync_log_action
+#: model:ir.ui.menu,name:kalku_connector.menu_kalku_sync_log
+msgid "Sync log"
+msgstr "Registro de sincronización"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Sync now"
 msgstr "Sincronizar ahora"
 
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Synchronization"
+msgstr "Sincronización"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Test connection"
+msgstr "Probar conexión"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Token"
+msgstr "Token"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "What to send"
+msgstr "Qué enviar"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "https://app.kalku.co"
+msgstr "https://app.kalku.co"

@@ -1,0 +1,320 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* kalku_connector
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0-20261102\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-09 01:51+0000\n"
+"PO-Revision-Date: 2026-11-09 01:51+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Address of your Kalku account, for example https://app.kalku.co"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__dataset__all
+msgid "All"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__res_config_settings__kalku_sales_source__auto
+msgid "Automatic"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Automatic uses sales orders when the Sales app is installed and customer "
+"invoices otherwise."
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model,name:kalku_connector.model_res_config_settings
+msgid "Config Settings"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Connection"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__create_uid
+msgid "Created by"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Current stock per warehouse."
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__res_config_settings__kalku_sales_source__invoices
+msgid "Customer invoices"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__dataset
+msgid "Dataset"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__display_name
+msgid "Display Name"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__documents_read
+msgid "Documents Read"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__state__done
+msgid "Done"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__error
+msgid "Error"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__state__failed
+msgid "Failed"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__finished_at
+msgid "Finished At"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__sync_type__full
+msgid "Full"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Generate it in Kalku > Settings > Integrations > \"Odoo (módulo)\" > "
+"\"Generar token\". Leave empty to keep the saved one."
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__id
+msgid "ID"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__sync_type__incremental
+msgid "Incremental"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.ui.menu,name:kalku_connector.menu_kalku_root
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Kalku"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_url
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Kalku URL"
+msgstr ""
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Kalku URL must use https."
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__kalku_response
+msgid "Kalku response (JSON)"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model,name:kalku_connector.model_kalku_sync_log
+msgid "Kalku sync log"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_token
+msgid "Kalku token"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Lead times per product and supplier, for the reorder points."
+msgstr ""
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Not implemented yet"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Paste the token here"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Products without an internal reference are skipped and reported in the sync "
+"log."
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__rows_sent
+msgid "Rows Sent"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__state__running
+msgid "Running"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__dataset__sales
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Sales"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Sales documents, to forecast demand by product."
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__res_config_settings__kalku_sales_source__orders
+msgid "Sales orders"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_sales_source
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Sales source"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_sync_sales
+msgid "Send sales"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_sync_stock
+msgid "Send stock"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_sync_supplier_terms
+msgid "Send supplier lead times"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_default_code
+msgid "Skipped: no internal reference"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_warehouse_code
+msgid "Skipped: no warehouse code"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_service
+msgid "Skipped: services"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__started_at
+msgid "Started At"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__state
+msgid "State"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__dataset__stock
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Stock"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Supplier lead times"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields.selection,name:kalku_connector.selection__kalku_sync_log__dataset__supplier_terms
+msgid "Supplier terms"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__sync_type
+msgid "Sync Type"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.actions.act_window,name:kalku_connector.kalku_sync_log_action
+#: model:ir.ui.menu,name:kalku_connector.menu_kalku_sync_log
+msgid "Sync log"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Sync now"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Synchronization"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Test connection"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Token"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "What to send"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "https://app.kalku.co"
+msgstr ""

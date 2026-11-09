@@ -20,7 +20,6 @@ Odoo Online (SaaS).
         "views/res_config_settings_views.xml",
         "data/ir_cron.xml",
     ],
-    "images": ["static/description/icon.png"],
     "installable": True,
     "application": False,
 }

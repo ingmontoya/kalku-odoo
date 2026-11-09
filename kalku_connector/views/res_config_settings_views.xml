@@ -15,7 +15,7 @@
                             <field name="kalku_url" placeholder="https://app.kalku.co"/>
                         </setting>
                         <setting string="Token"
-                                 help="Generate it in Kalku &gt; Configuración &gt; Integraciones &gt; Odoo (módulo) &gt; Generar token. Leave empty to keep the saved one.">
+                                 help="Generate it in Kalku &gt; Settings &gt; Integrations &gt; &quot;Odoo (módulo)&quot; &gt; &quot;Generar token&quot;. Leave empty to keep the saved one.">
                             <field name="kalku_token" password="True"
                                    placeholder="Paste the token here"/>
                             <div class="mt8">

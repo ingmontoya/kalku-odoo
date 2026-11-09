@@ -13,6 +13,20 @@ inventory-planning service.
 - It never writes to Odoo core models. It stores its settings as
   `ir.config_parameter` keys under `kalku.*` and keeps its own sync log
   (`kalku.sync.log`, Inventory > Configuration > Kalku > Sync log).
+- Translations: `i18n/kalku_connector.pot` is exported from Odoo; `es.po` is
+  derived from it.
+
+## Data that leaves Odoo
+
+Using this module requires a Kalku account (an external service). It sends:
+
+- Sales lines: date, document number, product internal reference and name,
+  quantity, untaxed amount, unit price and warehouse code.
+- Customer and supplier names with their tax ID (VAT), used as identifiers.
+- Stock per product.
+- Supplier lead time, minimum quantity and price.
+
+The module's only writes in Odoo are its settings and its own sync log.
 
 ## Limits
 

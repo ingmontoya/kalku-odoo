@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
@@ -9,7 +11,19 @@ PARAM_SYNC_SUPPLIER_TERMS = "kalku.sync_supplier_terms"
 PARAM_SALES_SOURCE = "kalku.sales_source"
 
 # Plain http is accepted only for local development.
-ALLOWED_HTTP_PREFIXES = ("http://localhost", "http://host.docker.internal")
+ALLOWED_HTTP_HOSTS = {"localhost", "127.0.0.1", "host.docker.internal"}
+
+
+def is_allowed_kalku_url(url):
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+    except ValueError:
+        return False
+    scheme = (parsed.scheme or "").lower()
+    if scheme == "https":
+        return bool(hostname)
+    return scheme == "http" and hostname in ALLOWED_HTTP_HOSTS
 
 
 class ResConfigSettings(models.TransientModel):
@@ -37,7 +51,7 @@ class ResConfigSettings(models.TransientModel):
             url = (settings.kalku_url or "").strip()
             if not url:
                 continue
-            if not (url.startswith("https://") or url.startswith(ALLOWED_HTTP_PREFIXES)):
+            if not is_allowed_kalku_url(url):
                 raise ValidationError(_("Kalku URL must use https."))
 
     @api.model
