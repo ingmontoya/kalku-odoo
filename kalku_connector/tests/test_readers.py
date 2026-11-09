@@ -241,6 +241,25 @@ class TestKalkuReaders(KalkuFixtureCase):
         self.assertEqual(result["skipped"], self.fixture["inventory"]["skipped"])
         self.assertNotIn("ETQ-001", [row["product_key"] for row in result["rows"]])
 
+    def test_service_is_decided_by_type_not_detailed_type(self):
+        # Modules like event add detailed_types that map to type 'service'; none
+        # is installed here, so the stored value is rewritten under the constraint.
+        product = self.env["product.product"].create(
+            {"name": "Entrada", "default_code": "EVT-001", "detailed_type": "service"}
+        )
+        self.env.flush_all()
+        self.env.cr.execute(
+            "UPDATE product_template SET detailed_type = 'consu' WHERE id = %s",
+            [product.product_tmpl_id.id],
+        )
+        self.env.invalidate_all()
+        self.assertEqual((product.type, product.detailed_type), ("service", "consu"))
+        result = self.readers().read_stock(date(2026, 11, 8))
+        expected = dict(self.fixture["inventory"]["skipped"])
+        expected["service"] += 1
+        self.assertEqual(result["skipped"], expected)
+        self.assertNotIn("EVT-001", [row["product_key"] for row in result["rows"]])
+
     @requires_sale_stock
     def test_count_sales_matches_read_sales(self):
         for source in ("orders", "invoices"):
