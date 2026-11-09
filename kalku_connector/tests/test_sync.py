@@ -5,8 +5,11 @@ from unittest.mock import patch
 import requests
 from requests.structures import CaseInsensitiveDict
 
-from odoo import fields
-from odoo.exceptions import UserError
+from odoo import SUPERUSER_ID, Command, api, fields
+from odoo.api import call_kw
+from odoo.exceptions import AccessError, UserError
+from odoo.service.model import get_public_method
+from odoo.sql_db import db_connect
 from odoo.tests import tagged
 from odoo.tests.common import TransactionCase
 
@@ -94,10 +97,15 @@ class FakeKalku:
 class KalkuSyncCase(KalkuFixtureCase):
     def setUp(self):
         super().setUp()
+        # Log rows are written on a cursor of their own; in test mode that
+        # cursor shares this test's transaction, so the test can read them.
+        self.registry.enter_test_mode(self.cr)
+        self.addCleanup(self.registry.leave_test_mode)
         self.params = self.env["ir.config_parameter"].sudo()
         self.configure(
             url=BASE,
             token="plain-token",
+            company_id=str(self.company_a.id),
             sync_sales="True",
             sync_stock="False",
             sync_supplier_terms="False",
@@ -108,7 +116,7 @@ class KalkuSyncCase(KalkuFixtureCase):
         for key, value in values.items():
             self.params.set_param("kalku.%s" % key, value)
 
-    def sync(self, fake, method="run", **kwargs):
+    def sync(self, fake, method="_run", **kwargs):
         with patch("requests.Session.request", side_effect=fake), patch(
             "time.sleep"
         ) as self.sleep:
@@ -357,6 +365,47 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertIsNone(read_sales.call_args.args[2])
         self.assertEqual(log.sync_type, "full")
 
+    @requires_sale_stock
+    def test_interrupted_switch_retracts_the_whole_old_list_again(self):
+        # The last confirmed run sent invoices; the switch to orders breaks
+        # after the first slice of the old list.
+        self.set_watermark("2026-11-01 00:00:00", source="invoices")
+        first = FakeKalku(
+            sales_source_loaded="invoices",
+            answers={(SALES, 2): response(500, {"message": "Server Error"})},
+        )
+        with patch.object(kalku_sync, "CHUNK_NUMBERS", 1):
+            log = self.sync(first)
+            self.assertEqual(log.state, "failed")
+            self.assertEqual(
+                [p["previous_source_retract"] for p in first.payloads(SALES)],
+                [["INV/2026/0007"], ["RINV/2026/0002"]],
+            )
+            # Kalku took the new source with the first slice: its ping says orders.
+            second = FakeKalku(sales_source_loaded="orders")
+            log = self.sync(second)
+
+        sales = second.payloads(SALES)
+        self.assertEqual(
+            [(p.get("previous_source"), p["previous_source_retract"]) for p in sales[:2]],
+            [("invoices", ["INV/2026/0007"]), ("invoices", ["RINV/2026/0002"])],
+        )
+        self.assertEqual(len(sales), 3)
+        self.assertEqual(sales[2]["previous_source_retract"], [])
+        self.assertEqual({row["doc_number"] for row in sales[2]["rows"]}, {"S00042"})
+        self.assertEqual((log.state, log.sync_type), ("done", "full"))
+        self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
+
+    @requires_sale_stock
+    def test_next_run_closes_a_run_that_died(self):
+        dead = self.env["kalku.sync.log"].create({"sync_type": "full", "dataset": "sales"})
+        self.assertEqual(dead.state, "running")
+        self.sync(FakeKalku(sales_source_loaded="orders"))
+        dead.invalidate_recordset()
+        self.assertEqual(dead.state, "failed")
+        self.assertIn("stopped before finishing", dead.error)
+        self.assertTrue(dead.finished_at)
+
     def test_cron_never_raises(self):
         self.configure(sales_source="auto")
         fake = FakeKalku(
@@ -365,7 +414,7 @@ class TestKalkuSync(KalkuSyncCase):
                 (COMPLETE, 1): response(500, {"message": "Server Error"}),
             }
         )
-        self.assertIsNone(self.sync(fake, method="run_scheduled"))
+        self.assertIsNone(self.sync(fake, method="_run_scheduled"))
         log = self.last_log()
         self.assertEqual(log.state, "failed")
         self.assertEqual(log.error, "Server Error")
@@ -376,7 +425,7 @@ class TestKalkuSync(KalkuSyncCase):
             raise RuntimeError("boom")
 
         with self.assertLogs("odoo.addons.kalku_connector.models.kalku_sync", "ERROR"):
-            self.assertIsNone(self.sync(broken, method="run_scheduled"))
+            self.assertIsNone(self.sync(broken, method="_run_scheduled"))
         log = self.last_log()
         self.assertEqual(log.state, "failed")
         self.assertEqual(log.error, "boom")
@@ -388,7 +437,7 @@ class TestKalkuSync(KalkuSyncCase):
         with patch.object(Readers, "read_sales", side_effect=refusal), self.assertNoLogs(
             "odoo.addons.kalku_connector.models.kalku_sync", "ERROR"
         ):
-            self.assertIsNone(self.sync(fake, method="run_scheduled"))
+            self.assertIsNone(self.sync(fake, method="_run_scheduled"))
         log = self.last_log()
         self.assertEqual(log.state, "failed")
         self.assertEqual(log.error, refusal.args[0])
@@ -397,7 +446,7 @@ class TestKalkuSync(KalkuSyncCase):
     def test_cron_without_configuration_does_nothing(self):
         self.configure(url="")
         fake = FakeKalku()
-        self.assertIsNone(self.sync(fake, method="run_scheduled"))
+        self.assertIsNone(self.sync(fake, method="_run_scheduled"))
         self.assertEqual(fake.calls, [])
         self.assertFalse(self.last_log())
 
@@ -408,7 +457,8 @@ class TestKalkuSync(KalkuSyncCase):
 
     def test_cron_is_daily(self):
         cron = self.env.ref("kalku_connector.ir_cron_kalku_sync")
-        self.assertEqual(cron.code.strip(), "model.run_scheduled()")
+        self.assertEqual(cron.code.strip(), "model._run_scheduled()")
+        self.assertEqual(cron.user_id, self.env.ref("base.user_root"))
         self.assertEqual((cron.interval_number, cron.interval_type), (1, "days"))
         self.assertEqual(cron.model_id.model, "kalku.sync")
 
@@ -438,6 +488,79 @@ class TestKalkuSettingsButtons(KalkuSyncCase):
         ) as raised:
             self._settings().action_kalku_test_connection()
         self.assertEqual(str(raised.exception), INACTIVE_OWNER)
+
+    def test_company_defaults_to_the_active_one_and_is_stored(self):
+        # Post-install: creating a company needs every installed module's defaults.
+        self.params.set_param("kalku.company_id", "")
+        settings = self._settings()
+        self.assertEqual(settings.kalku_company_id, self.env.company)
+        settings.write({"kalku_company_id": self.company_b.id})
+        settings.execute()
+        self.assertEqual(self.params.get_param("kalku.company_id"), str(self.company_b.id))
+        self.assertEqual(self._settings().kalku_company_id, self.company_b)
+
+    def _user(self, login, group):
+        return self.env["res.users"].create(
+            {"name": login, "login": login, "groups_id": [Command.set([self.env.ref(group).id])]}
+        )
+
+    def test_only_administrators_reach_the_buttons(self):
+        settings = self._settings()
+        users = (
+            self._user("kalku_internal", "base.group_user"),
+            self._user("kalku_portal", "base.group_portal"),
+        )
+        for user in users:
+            for method in ("action_kalku_test_connection", "action_kalku_sync_now"):
+                with self.subTest(user=user.login, method=method):
+                    fake = FakeKalku()
+                    model = self.env["res.config.settings"].with_user(user)
+                    with patch("requests.Session.request", side_effect=fake), self.assertRaises(
+                        AccessError
+                    ):
+                        # What /web/dataset/call_button does.
+                        get_public_method(model, method)
+                        call_kw(model, method, [settings.ids], {})
+                    self.assertEqual(fake.calls, [])
+
+    def test_sync_methods_cannot_be_called_remotely(self):
+        for name in ("_run", "_run_scheduled", "_runs_in_request", "_test_connection"):
+            with self.subTest(name=name), self.assertRaises(AccessError):
+                get_public_method(self.env["kalku.sync"], name)
+
+    def test_saved_token_never_goes_to_another_url(self):
+        fake = FakeKalku()
+        settings = self._settings(kalku_url="https://evil.example")
+        with patch("requests.Session.request", side_effect=fake):
+            with self.assertRaises(UserError) as raised:
+                settings.action_kalku_test_connection()
+            self.assertEqual(
+                str(raised.exception), "Type the token to test a URL other than the saved one."
+            )
+            with self.assertRaises(UserError):
+                self.env["kalku.sync"]._test_connection(url="https://evil.example")
+        self.assertEqual(fake.calls, [])
+
+    def test_test_connection_refuses_plain_http(self):
+        fake = FakeKalku()
+        with patch("requests.Session.request", side_effect=fake), self.assertRaises(
+            UserError
+        ) as raised:
+            self.env["kalku.sync"]._test_connection(url="http://evil.example", token="typed")
+        self.assertEqual(str(raised.exception), "Kalku URL must use https.")
+        self.assertEqual(fake.calls, [])
+
+    @requires_sale_stock
+    def test_sync_now_sends_the_settings_company_only(self):
+        fake = FakeKalku()
+        settings = self.env["res.config.settings"].with_company(self.company_b).create({})
+        self.assertEqual(settings.kalku_company_id, self.company_a)
+        with patch("requests.Session.request", side_effect=fake):
+            settings.action_kalku_sync_now()
+        sales = fake.payloads(SALES)
+        self.assertEqual({row["doc_number"] for p in sales for row in p["rows"]}, {"S00042"})
+        self.assertEqual([n for p in sales for n in p["retract"]], ["S00043"])
+        self.assertEqual(self.last_log().state, "done")
 
     @requires_sale_stock
     def test_sync_now_runs_in_the_request_when_small(self):
@@ -486,12 +609,10 @@ class TestKalkuClient(TransactionCase):
                 raise answer
             return answer
 
-        # Each call replaces the previous fakes (subTest loops call it again).
-        patch.stopall()
+        # A later call (subTest loops) stacks newer fakes over the earlier ones.
         self.calls = calls
-        patch("requests.Session.request", side_effect=fake).start()
-        self.sleep = patch("time.sleep").start()
-        self.addCleanup(patch.stopall)
+        self.startPatcher(patch("requests.Session.request", side_effect=fake))
+        self.sleep = self.startPatcher(patch("time.sleep"))
         return KalkuClient(url, "plain-token")
 
     def test_request_shape(self):
@@ -573,3 +694,100 @@ class TestKalkuClient(TransactionCase):
             client.ping()
         self.assertEqual(raised.exception.status, 429)
         self.assertEqual(len(self.calls), 2)
+
+
+class PlainSyncCase(TransactionCase):
+    """A sync of the demo stock, outside test mode: log rows are really
+    committed by their own cursor, and this test's transaction never sees
+    them (repeatable read), so they are read and removed on fresh cursors."""
+
+    def setUp(self):
+        super().setUp()
+        params = self.env["ir.config_parameter"].sudo()
+        for key, value in {
+            "url": BASE,
+            "token": "plain-token",
+            "company_id": str(self.env.company.id),
+            "sync_sales": "False",
+            "sync_stock": "True",
+            "sync_supplier_terms": "False",
+        }.items():
+            params.set_param("kalku.%s" % key, value)
+        with self.registry.cursor() as cr:
+            cr.execute("SELECT COALESCE(MAX(id), 0) FROM kalku_sync_log")
+            self.last_id = cr.fetchone()[0]
+        self.addCleanup(self._delete_committed_logs)
+
+    def _delete_committed_logs(self):
+        with self.registry.cursor() as cr:
+            cr.execute("DELETE FROM kalku_sync_log WHERE id > %s", [self.last_id])
+
+    def committed_logs(self):
+        with self.registry.cursor() as cr:
+            Log = api.Environment(cr, SUPERUSER_ID, {})["kalku.sync.log"]
+            return Log.search_read(
+                [("id", ">", self.last_id)], ["state", "error"], order="id"
+            )
+
+    def sync(self, fake, method="_run"):
+        with patch("requests.Session.request", side_effect=fake), patch("time.sleep"):
+            return getattr(self.env["kalku.sync"], method)()
+
+
+class WorkerKilled(BaseException):
+    """Stands for Odoo killing a worker past its time limit: nothing catches it."""
+
+
+@tagged("post_install", "-at_install")
+class TestKalkuSyncCommittedLog(PlainSyncCase):
+    def test_killed_run_keeps_its_log_and_the_next_run_closes_it(self):
+        fake = FakeKalku(answers={(COMPLETE, 1): WorkerKilled()})
+
+        def killing(method, url, **kwargs):
+            answer = fake(method, url, **kwargs)
+            if isinstance(answer, BaseException):
+                raise answer
+            return answer
+
+        with self.assertRaises(WorkerKilled):
+            self.sync(killing)
+        self.assertEqual(
+            [(log["state"], log["error"]) for log in self.committed_logs()], [("running", False)]
+        )
+
+        self.sync(FakeKalku())
+        logs = self.committed_logs()
+        self.assertEqual([log["state"] for log in logs], ["failed", "done"])
+        self.assertIn("stopped before finishing", logs[0]["error"])
+
+    def test_handled_failure_is_committed(self):
+        self.sync(
+            FakeKalku(
+                answers={
+                    (PING, 1): response(500, {"message": "Server Error"}),
+                    (COMPLETE, 1): response(500, {"message": "Server Error"}),
+                }
+            )
+        )
+        self.assertEqual(
+            [(log["state"], log["error"]) for log in self.committed_logs()],
+            [("failed", "Server Error")],
+        )
+
+
+@tagged("post_install", "-at_install")
+class TestKalkuSyncLock(PlainSyncCase):
+    def test_a_second_run_is_refused_while_one_runs(self):
+        other = db_connect(self.cr.dbname).cursor()
+        self.addCleanup(other.close)
+        other.execute("SELECT pg_try_advisory_lock(%s)", [kalku_sync.LOCK_KEY])
+        self.assertTrue(other.fetchone()[0])
+        self.addCleanup(other.execute, "SELECT pg_advisory_unlock(%s)", [kalku_sync.LOCK_KEY])
+
+        fake = FakeKalku()
+        with self.assertRaises(UserError) as raised:
+            self.sync(fake)
+        self.assertEqual(str(raised.exception), "A Kalku sync is already running.")
+        self.assertIsNone(self.sync(fake, method="_run_scheduled"))
+        self.assertEqual(fake.calls, [])
+        self.assertEqual(self.committed_logs(), [])

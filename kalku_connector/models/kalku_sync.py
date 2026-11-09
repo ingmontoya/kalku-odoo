@@ -1,10 +1,11 @@
 """Send the readers' canonical rows to Kalku.
 
 One run: ping, sales (previous-source retraction first when the source
-changed), stock, supplier terms, then ``sync/complete``. The sales watermark
-only moves after Kalku confirmed the run, so anything that fails is read again
-by the next run; Kalku deduplicates by document number, so resending a chunk
-loads nothing twice.
+changed), stock, supplier terms, then ``sync/complete``. Every run is pinned to
+the company chosen in the settings and runs as superuser there. The sales
+watermark only moves after Kalku confirmed the run, so anything that fails is
+read again by the next run; Kalku deduplicates by document number, so resending
+a chunk loads nothing twice.
 """
 
 import json
@@ -17,12 +18,14 @@ from odoo.exceptions import UserError
 from .kalku_client import KalkuAuthError, KalkuClient, KalkuError
 from .kalku_readers import SALES_SOURCES
 from .res_config_settings import (
+    PARAM_COMPANY,
     PARAM_SALES_SOURCE,
     PARAM_SYNC_SALES,
     PARAM_SYNC_STOCK,
     PARAM_SYNC_SUPPLIER_TERMS,
     PARAM_TOKEN,
     PARAM_URL,
+    is_allowed_kalku_url,
 )
 
 _logger = logging.getLogger(__name__)
@@ -42,6 +45,8 @@ MAX_DOCUMENTS_IN_REQUEST = 2000
 OVERLAP = timedelta(hours=24)
 SKIP_REASONS = ("no_default_code", "service", "no_warehouse_code")
 DATASETS = ("sales", "stock", "supplier_terms")
+# Postgres advisory lock that keeps two runs (cron and button) from overlapping.
+LOCK_KEY = 0x4B414C4B55
 
 
 def _chunks_by(rows, key, size):
@@ -78,6 +83,10 @@ def _add_answer(total, answer):
 
 
 class KalkuSync(models.AbstractModel):
+    """Every method is private: the settings buttons and the cron are the only
+    ways in, so no user can call a sync (or send the token elsewhere) through
+    RPC."""
+
     _name = "kalku.sync"
     _description = "Kalku sync"
 
@@ -86,9 +95,14 @@ class KalkuSync(models.AbstractModel):
     @api.model
     def _settings(self):
         get = self.env["ir.config_parameter"].sudo().get_param
+        try:
+            company = int(get(PARAM_COMPANY) or 0)
+        except ValueError:
+            company = 0
         return {
             "url": (get(PARAM_URL) or "").strip(),
             "token": (get(PARAM_TOKEN) or "").strip(),
+            "company": company,
             "sales": get(PARAM_SYNC_SALES) == "True",
             "stock": get(PARAM_SYNC_STOCK) == "True",
             "supplier_terms": get(PARAM_SYNC_SUPPLIER_TERMS) == "True",
@@ -100,11 +114,25 @@ class KalkuSync(models.AbstractModel):
         return [name for name in DATASETS if settings[name]]
 
     @api.model
+    def _company(self, settings):
+        return self.env["res.company"].sudo().browse(settings["company"]).exists()
+
+    @api.model
     def _check_configured(self, settings):
         if not settings["url"] or not settings["token"]:
             raise UserError(_("Set the Kalku URL and token first."))
+        if not is_allowed_kalku_url(settings["url"]):
+            raise UserError(_("Kalku URL must use https."))
+        if not self._company(settings):
+            raise UserError(_("Choose the company whose data is sent to Kalku."))
         if not self._ticked(settings):
             raise UserError(_("Choose at least one dataset to send."))
+
+    @api.model
+    def _pinned(self, settings):
+        """Superuser in the company chosen in the settings, never the active one
+        of whoever pressed the button: readers see that company's records only."""
+        return self.sudo().with_company(self._company(settings))
 
     @api.model
     def _sales_source(self, settings):
@@ -120,55 +148,124 @@ class KalkuSync(models.AbstractModel):
             return None
         return fields.Datetime.from_string(watermark) - OVERLAP
 
-    # Entry points -----------------------------------------------------------
+    # Entry points (called by the settings buttons and the cron) -------------
 
     @api.model
-    def test_connection(self, url=None, token=None):
-        """Kalku's ping answer; ``url`` / ``token`` override the stored ones."""
+    def _test_connection(self, url=None, token=None):
+        """Kalku's ping answer for the URL and token on screen.
+
+        The saved token is only ever sent to the saved URL: testing another URL
+        needs the token typed again.
+        """
         settings = self._settings()
-        url = (url or "").strip() or settings["url"]
-        token = (token or "").strip() or settings["token"]
-        if not url or not token:
+        typed_url = (url or "").strip()
+        typed_token = (token or "").strip()
+        if typed_url and typed_url.rstrip("/") != settings["url"].rstrip("/"):
+            if not typed_token:
+                raise UserError(_("Type the token to test a URL other than the saved one."))
+            target, secret = typed_url, typed_token
+        else:
+            target, secret = settings["url"], typed_token or settings["token"]
+        if not target or not secret:
             raise UserError(_("Set the Kalku URL and token first."))
-        return KalkuClient(url, token).ping()
+        if not is_allowed_kalku_url(target):
+            raise UserError(_("Kalku URL must use https."))
+        return KalkuClient(target, secret).ping()
 
     @api.model
-    def runs_in_request(self):
+    def _runs_in_request(self):
         """Whether "Sync now" can run without handing the work to the cron."""
         settings = self._settings()
+        self._check_configured(settings)
         if not settings["sales"]:
             return True
-        source = self._sales_source(settings)
-        count = self.env["kalku.readers"].count_sales(source, self._sales_since(source))
+        sync = self._pinned(settings)
+        source = sync._sales_source(settings)
+        count = sync.env["kalku.readers"].count_sales(source, sync._sales_since(source))
         return count <= MAX_DOCUMENTS_IN_REQUEST
 
     @api.model
-    def run_scheduled(self):
+    def _run_scheduled(self):
         """Cron entry point: never raises, does nothing until configured."""
-        settings = self._settings()
-        if not settings["url"] or not settings["token"] or not self._ticked(settings):
-            _logger.info("Kalku sync skipped: the module is not configured.")
+        try:
+            self._check_configured(self._settings())
+        except UserError as exc:
+            _logger.info("Kalku sync skipped: %s", exc.args[0])
             return
         try:
-            self.run()
+            self._run()
+        except UserError as exc:
+            # Another run holds the lock.
+            _logger.info("Kalku sync skipped: %s", exc.args[0])
         except Exception:
             _logger.exception("Kalku sync could not run.")
 
     @api.model
-    def run(self, sync_type="incremental"):
+    def _run(self, sync_type="incremental"):
         settings = self._settings()
         self._check_configured(settings)
+        return self._pinned(settings)._run_pinned(settings, sync_type)
+
+    # Log on its own cursor ------------------------------------------------
+
+    @api.model
+    def _log_write(self, log_id, values):
+        """Create or update a log row on a cursor of its own, committed at once,
+        so the row outlives a run whose transaction is rolled back or whose
+        worker is killed (Odoo's time limit). Returns the row's id."""
+        with self.env.registry.cursor() as cr:
+            Log = api.Environment(cr, self.env.uid, {})["kalku.sync.log"].sudo()
+            if log_id:
+                Log.browse(log_id).write(values)
+            else:
+                log_id = Log.create(values).id
+        self.env["kalku.sync.log"].invalidate_model()
+        return log_id
+
+    @api.model
+    def _log_values(self, log_id, field_names):
+        """A log row read on a fresh cursor: the caller's transaction may have
+        started before the row was committed and would not see it."""
+        with self.env.registry.cursor() as cr:
+            Log = api.Environment(cr, self.env.uid, {})["kalku.sync.log"].sudo()
+            return Log.browse(log_id).read(field_names)[0]
+
+    @api.model
+    def _close_stale_logs(self):
+        """Runs still marked running died without finishing (the lock is free)."""
+        message = _(
+            "The sync stopped before finishing, for example because Odoo's time limit ended it."
+        )
+        with self.env.registry.cursor() as cr:
+            Log = api.Environment(cr, self.env.uid, {})["kalku.sync.log"].sudo()
+            Log.search([("state", "=", "running")]).write(
+                {"state": "failed", "error": message, "finished_at": fields.Datetime.now()}
+            )
+        self.env["kalku.sync.log"].invalidate_model()
+
+    @api.model
+    def _lock(self):
+        self.env.cr.execute("SELECT pg_try_advisory_xact_lock(%s)", [LOCK_KEY])
+        if not self.env.cr.fetchone()[0]:
+            raise UserError(_("A Kalku sync is already running."))
+
+    # Run ------------------------------------------------------------------
+
+    def _run_pinned(self, settings, sync_type):
+        self._lock()
+        self._close_stale_logs()
         ticked = self._ticked(settings)
         source = self._sales_source(settings) if settings["sales"] else None
         if source and self._sales_since(source) is None:
             sync_type = "full"
         started = fields.Datetime.now()
-        log = self.env["kalku.sync.log"].sudo().create(
+        log_id = self._log_write(
+            None,
             {
                 "started_at": started,
                 "sync_type": sync_type,
                 "dataset": ticked[0] if len(ticked) == 1 else "all",
-            }
+            },
         )
         progress = {
             "sync_type": sync_type,
@@ -180,12 +277,12 @@ class KalkuSync(models.AbstractModel):
         client = KalkuClient(settings["url"], settings["token"])
         try:
             with self.env.cr.savepoint():
-                self._push(client, settings, source, started, progress)
+                self._push(client, source, started, progress, settings)
                 client.complete(self._complete_payload(started, progress, "completed"))
         except KalkuAuthError as exc:
             # The token cannot write anything, not even the failure.
             _logger.info("Kalku refused the token: %s", exc.message)
-            return self._finish(log, progress, "failed", exc.message)
+            return self._finish(log_id, progress, "failed", exc.message)
         except Exception as exc:
             if isinstance(exc, KalkuError):
                 message, errors = exc.message, exc.errors
@@ -201,17 +298,17 @@ class KalkuSync(models.AbstractModel):
                 client.complete(self._complete_payload(started, progress, "failed", message))
             except Exception as complete_exc:
                 _logger.info("Kalku did not record the failed run: %s", complete_exc)
-            return self._finish(log, progress, "failed", message, errors)
+            return self._finish(log_id, progress, "failed", message, errors)
 
         if source:
             params = self.env["ir.config_parameter"].sudo()
             params.set_param(PARAM_LAST_SYNC_SALES, fields.Datetime.to_string(started))
             params.set_param(PARAM_LAST_SYNC_SALES_SOURCE, source)
-        return self._finish(log, progress, "done")
+        return self._finish(log_id, progress, "done")
 
     # Steps ------------------------------------------------------------------
 
-    def _push(self, client, settings, source, started, progress):
+    def _push(self, client, source, started, progress, settings):
         ping = client.ping()
         readers = self.env["kalku.readers"]
         if source:
@@ -228,24 +325,43 @@ class KalkuSync(models.AbstractModel):
                 progress,
             )
 
+    def _previous_source(self, source, ping):
+        """The source whose documents must leave Kalku before ``source`` loads.
+
+        Kalku's ``sales_source_loaded`` says which source it holds, but it takes
+        the new source on the first request of a switch; the last source a run
+        confirmed here still names the old one when that switch was interrupted.
+        """
+        loaded = ping.get("sales_source_loaded")
+        if loaded in SALES_SOURCES and loaded != source:
+            return loaded
+        confirmed = self.env["ir.config_parameter"].sudo().get_param(
+            PARAM_LAST_SYNC_SALES_SOURCE
+        )
+        if confirmed in SALES_SOURCES and confirmed != source:
+            return confirmed
+        return None
+
     def _push_sales(self, client, source, ping, progress):
         readers = self.env["kalku.readers"]
         total = progress["datasets"].setdefault("sales", {})
         since = None if progress["sync_type"] == "full" else self._sales_since(source)
 
-        loaded = ping.get("sales_source_loaded")
-        if loaded in SALES_SOURCES and loaded != source:
+        previous = self._previous_source(source, ping)
+        if previous:
             # Orders and invoices are the same sales: retract every document of
-            # the old source, then load the new one from the start.
+            # the old source (the whole list again after an interruption; Kalku
+            # ignores numbers it no longer has), then load the new one from the
+            # start.
             progress["sync_type"], since = "full", None
-            numbers = readers.read_sales(loaded, None)["documents"]
+            numbers = readers.read_sales(previous, None)["documents"]
             for part in _slices(numbers, CHUNK_NUMBERS):
                 _add_answer(
                     total,
                     client.push_sales(
                         {
                             "source": source,
-                            "previous_source": loaded,
+                            "previous_source": previous,
                             "rows": [],
                             "retract": [],
                             "previous_source_retract": part,
@@ -301,11 +417,12 @@ class KalkuSync(models.AbstractModel):
             payload["error"] = error[:2000]
         return payload
 
-    def _finish(self, log, progress, state, error=None, errors=None):
+    def _finish(self, log_id, progress, state, error=None, errors=None):
         response = self._datasets_payload(progress)
         if errors:
             response["errors"] = errors
-        log.write(
+        self._log_write(
+            log_id,
             {
                 "state": state,
                 "error": error,
@@ -317,6 +434,6 @@ class KalkuSync(models.AbstractModel):
                 "skipped_service": progress["skipped"]["service"],
                 "skipped_no_warehouse_code": progress["skipped"]["no_warehouse_code"],
                 "kalku_response": json.dumps(response, ensure_ascii=False, indent=2),
-            }
+            },
         )
-        return log
+        return self.env["kalku.sync.log"].browse(log_id)

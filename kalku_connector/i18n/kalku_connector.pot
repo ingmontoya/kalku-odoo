@@ -6,14 +6,20 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0-20261102\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 02:52+0000\n"
-"PO-Revision-Date: 2026-11-09 02:52+0000\n"
+"POT-Creation-Date: 2026-11-09 03:23+0000\n"
+"PO-Revision-Date: 2026-11-09 03:23+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Plural-Forms: \n"
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "A Kalku sync is already running."
+msgstr ""
 
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
@@ -41,6 +47,29 @@ msgstr ""
 #. odoo-python
 #: code:addons/kalku_connector/models/kalku_sync.py:0
 msgid "Choose at least one dataset to send."
+msgstr ""
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "Choose the company whose data is sent to Kalku."
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Company"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_company_id
+msgid "Company to send"
+msgstr ""
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Company whose sales, stock and supplier lead times are sent, whichever "
+"company is active when you sync."
 msgstr ""
 
 #. module: kalku_connector
@@ -150,6 +179,7 @@ msgstr ""
 
 #. module: kalku_connector
 #. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
 #: code:addons/kalku_connector/models/res_config_settings.py:0
 msgid "Kalku URL must use https."
 msgstr ""
@@ -197,6 +227,12 @@ msgstr ""
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Lead times per product and supplier, for the reorder points."
+msgstr ""
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Only administrators can use the Kalku settings."
 msgstr ""
 
 #. module: kalku_connector
@@ -356,8 +392,22 @@ msgid "The Sales app is not installed: send sales from invoices instead."
 msgstr ""
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid ""
+"The sync stopped before finishing, for example because Odoo's time limit "
+"ended it."
+msgstr ""
+
+#. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Token"
+msgstr ""
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "Type the token to test a URL other than the saved one."
 msgstr ""
 
 #. module: kalku_connector

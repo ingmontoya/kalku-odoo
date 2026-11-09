@@ -11,6 +11,12 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "A Kalku sync is already running."
+msgstr "Ya hay una sincronización con Kalku en curso."
+
+#. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Address of your Kalku account, for example https://app.kalku.co"
 msgstr "Dirección de tu cuenta de Kalku, por ejemplo https://app.kalku.co"
@@ -37,6 +43,29 @@ msgstr "Automática usa los pedidos de venta si la app de Ventas está instalada
 #: code:addons/kalku_connector/models/kalku_sync.py:0
 msgid "Choose at least one dataset to send."
 msgstr "Elige al menos un conjunto de datos para enviar."
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "Choose the company whose data is sent to Kalku."
+msgstr "Elige la empresa cuyos datos se envían a Kalku."
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Company"
+msgstr "Empresa"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_company_id
+msgid "Company to send"
+msgstr "Empresa que se envía"
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Company whose sales, stock and supplier lead times are sent, whichever "
+"company is active when you sync."
+msgstr "Empresa cuyas ventas, existencias y plazos de entrega de proveedores se envían, sin importar qué empresa esté activa al sincronizar."
 
 #. module: kalku_connector
 #: model:ir.model,name:kalku_connector.model_res_config_settings
@@ -195,6 +224,12 @@ msgid "Lead times per product and supplier, for the reorder points."
 msgstr "Plazos de entrega por producto y proveedor, para los puntos de reorden."
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Only administrators can use the Kalku settings."
+msgstr "Solo los administradores pueden usar los ajustes de Kalku."
+
+#. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Paste the token here"
 msgstr "Pega el token aquí"
@@ -351,9 +386,23 @@ msgid "The Sales app is not installed: send sales from invoices instead."
 msgstr "La app de Ventas no está instalada: envía las ventas desde las facturas."
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid ""
+"The sync stopped before finishing, for example because Odoo's time limit "
+"ended it."
+msgstr "La sincronización se detuvo antes de terminar, por ejemplo porque el límite de tiempo de Odoo la interrumpió."
+
+#. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Token"
 msgstr "Token"
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "Type the token to test a URL other than the saved one."
+msgstr "Escribe el token para probar una URL distinta de la guardada."
 
 #. module: kalku_connector
 #. odoo-python

@@ -57,6 +57,12 @@ mostrar después de guardarlo.
 
 "Probar conexión" consulta Kalku con la URL y el token que se ven en pantalla,
 aunque todavía no se hayan guardado, y muestra el nombre de la empresa en Kalku.
+El token guardado solo se envía a la URL guardada: para probar otra URL hay que
+escribir el token de nuevo. Solo los administradores pueden usar estos botones.
+
+En una base de datos con varias empresas, el campo "Empresa" indica cuál se
+envía a Kalku. Por omisión es la empresa activa al guardar los ajustes, y se
+respeta aunque después se sincronice con otra empresa activa.
 
 ## Sincronización
 
@@ -78,6 +84,32 @@ aunque todavía no se hayan guardado, y muestra el nombre de la empresa en Kalku
   token, la sincronización se detiene en ese punto; ante cualquier error, la
   siguiente vuelve a enviar el mismo periodo, y Kalku no duplica lo que ya
   recibió.
+- Nunca corren dos sincronizaciones a la vez: si la acción programada y
+  "Sincronizar ahora" coinciden, la segunda se rechaza con el aviso "Ya hay una
+  sincronización con Kalku en curso.".
+- Cada sincronización deja su fila en el registro aunque Odoo la interrumpa. Si
+  una queda "En curso" porque Odoo detuvo el proceso, la siguiente la marca como
+  fallida.
+
+### Bases de datos grandes
+
+Odoo detiene una acción programada que supera su límite de tiempo
+(`limit_time_real_cron`; si vale -1, se usa `limit_time_real`, que por omisión es
+de 120 segundos). La primera sincronización envía todas las ventas y en una base
+grande puede superar ese límite: el proceso se detiene, no se confirma nada en
+Kalku y la siguiente vuelve a empezar desde el principio. Para esa primera vez:
+
+- Sube el límite en el archivo de configuración de Odoo, por ejemplo
+  `limit_time_real_cron = 3600` (en segundos; 0 lo desactiva), y reinicia Odoo.
+- O ejecuta la sincronización desde `odoo shell`, que no tiene ese límite:
+
+  ```python
+  env["kalku.sync"]._run()
+  env.cr.commit()
+  ```
+
+Las sincronizaciones siguientes solo envían los documentos modificados y son
+mucho más cortas.
 
 ## Desarrollo
 

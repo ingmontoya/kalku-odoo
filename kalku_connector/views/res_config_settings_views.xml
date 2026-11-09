@@ -24,6 +24,11 @@
                                         icon="oi-arrow-right"/>
                             </div>
                         </setting>
+                        <setting string="Company"
+                                 help="Company whose sales, stock and supplier lead times are sent, whichever company is active when you sync."
+                                 groups="base.group_multi_company">
+                            <field name="kalku_company_id" options="{'no_create': True}"/>
+                        </setting>
                     </block>
                     <block title="What to send" name="kalku_datasets">
                         <setting string="Sales"
