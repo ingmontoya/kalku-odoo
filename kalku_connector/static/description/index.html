@@ -1,0 +1,30 @@
+<section class="oe_container">
+  <div class="oe_row oe_spaced">
+    <h2 class="oe_slogan">Kalku Connector</h2>
+    <h3 class="oe_slogan">Pronóstico de demanda y puntos de reorden a partir de tu Odoo</h3>
+    <p>
+      Kalku calcula el pronóstico y los puntos de reorden; este módulo solo lee tu Odoo y envía los datos.
+    </p>
+  </div>
+</section>
+<section class="oe_container">
+  <h3>Qué envía</h3>
+  <ul>
+    <li>Ventas (pedidos de venta o facturas de cliente), para pronosticar la demanda por producto.</li>
+    <li>Existencias por almacén.</li>
+    <li>Plazos de entrega por producto y proveedor.</li>
+  </ul>
+  <h3>Cómo se conecta</h3>
+  <ol>
+    <li>En Kalku, entra a Configuración &gt; Integraciones &gt; "Odoo (módulo)" y pulsa "Generar token".</li>
+    <li>En Odoo, abre Ajustes &gt; Kalku, pega la URL de tu cuenta y el token, y elige qué datos enviar.</li>
+  </ol>
+  <h3>Qué debes saber</h3>
+  <ul>
+    <li>No funciona en Odoo Online (SaaS): necesita instalar un módulo, y Odoo Online no lo permite.</li>
+    <li>Los productos sin referencia interna se omiten y se informan en el registro de sincronización.</li>
+    <li>El módulo no modifica ningún modelo de Odoo; solo guarda sus propios ajustes y su registro.</li>
+    <li>La URL debe usar https.</li>
+  </ul>
+  <p>Licencia LGPL-3.</p>
+</section>

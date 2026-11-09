@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_kalku" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.kalku</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="95"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Kalku" string="Kalku" name="kalku_connector"
+                     groups="base.group_system">
+                    <block title="Connection" name="kalku_connection">
+                        <setting string="Kalku URL"
+                                 help="Address of your Kalku account, for example https://app.kalku.co">
+                            <field name="kalku_url" placeholder="https://app.kalku.co"/>
+                        </setting>
+                        <setting string="Token"
+                                 help="Generate it in Kalku &gt; Configuración &gt; Integraciones &gt; Odoo (módulo) &gt; Generar token. Leave empty to keep the saved one.">
+                            <field name="kalku_token" password="True"
+                                   placeholder="Paste the token here"/>
+                            <div class="mt8">
+                                <button name="action_kalku_test_connection" type="object"
+                                        string="Test connection" class="btn-link"
+                                        icon="oi-arrow-right"/>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="What to send" name="kalku_datasets">
+                        <setting string="Sales"
+                                 help="Sales documents, to forecast demand by product.">
+                            <field name="kalku_sync_sales"/>
+                        </setting>
+                        <setting string="Sales source"
+                                 help="Automatic uses sales orders when the Sales app is installed and customer invoices otherwise."
+                                 invisible="not kalku_sync_sales">
+                            <field name="kalku_sales_source"/>
+                        </setting>
+                        <setting string="Stock"
+                                 help="Current stock per warehouse.">
+                            <field name="kalku_sync_stock"/>
+                        </setting>
+                        <setting string="Supplier lead times"
+                                 help="Lead times per product and supplier, for the reorder points.">
+                            <field name="kalku_sync_supplier_terms"/>
+                        </setting>
+                    </block>
+                    <block title="Synchronization" name="kalku_sync">
+                        <setting help="Products without an internal reference are skipped and reported in the sync log.">
+                            <button name="action_kalku_sync_now" type="object"
+                                    string="Sync now" class="btn-primary"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>
