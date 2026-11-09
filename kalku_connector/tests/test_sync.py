@@ -187,18 +187,18 @@ class TestKalkuSync(KalkuSyncCase):
         )
         self.assertNotIn("error", complete)
 
-        self.assertEqual(log.state, "done")
-        self.assertEqual(log.sync_type, "full")
-        self.assertEqual(log.dataset, "all")
-        self.assertEqual(log.documents_read, 3)
-        self.assertEqual(log.rows_sent, 7)
-        self.assertEqual(log.skipped_no_default_code, 3)
-        self.assertTrue(log.finished_at)
-        self.assertEqual(json.loads(log.kalku_response), complete["datasets"])
-        started = fields.Datetime.to_string(log.started_at)
+        self.assertEqual(log["state"], "done")
+        self.assertEqual(log["sync_type"], "full")
+        self.assertEqual(log["dataset"], "all")
+        self.assertEqual(log["documents_read"], 3)
+        self.assertEqual(log["rows_sent"], 7)
+        self.assertEqual(log["skipped_no_default_code"], 3)
+        self.assertTrue(log["finished_at"])
+        self.assertEqual(json.loads(log["kalku_response"]), complete["datasets"])
+        started = fields.Datetime.to_string(log["started_at"])
         self.assertEqual(self.params.get_param(WATERMARK), started)
         self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
-        self.assertEqual(complete["started_at"], log.started_at.isoformat() + "+00:00")
+        self.assertEqual(complete["started_at"], log["started_at"].isoformat() + "+00:00")
 
     @requires_sale_stock
     def test_document_never_split_across_chunks(self):
@@ -237,9 +237,9 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertNotIn("previous_source", sales[1])
         self.assertEqual({row["doc_number"] for row in sales[1]["rows"]}, {"S00042"})
         # A source switch reloads the new source from the start.
-        self.assertEqual(log.sync_type, "full")
+        self.assertEqual(log["sync_type"], "full")
         self.assertEqual(fake.payloads(COMPLETE)[0]["sync_type"], "full")
-        self.assertEqual(log.state, "done")
+        self.assertEqual(log["state"], "done")
 
     @requires_sale_stock
     def test_previous_source_retract_is_sliced(self):
@@ -270,9 +270,9 @@ class TestKalkuSync(KalkuSyncCase):
         with patch.object(kalku_sync, "CHUNK_DOCUMENTS", 1):
             log = self.sync(fake)
 
-        self.assertEqual(log.state, "failed")
-        self.assertEqual(log.error, INACTIVE_OWNER)
-        self.assertTrue(log.finished_at)
+        self.assertEqual(log["state"], "failed")
+        self.assertEqual(log["error"], INACTIVE_OWNER)
+        self.assertTrue(log["finished_at"])
         # Nothing after the refused request, not even the closing call.
         self.assertEqual(fake.paths(), [PING, SALES, SALES])
         self.assertEqual(self.params.get_param(WATERMARK), "2026-01-01 00:00:00")
@@ -284,8 +284,8 @@ class TestKalkuSync(KalkuSyncCase):
         )
         log = self.sync(fake)
         self.assertEqual(fake.paths(), [PING])
-        self.assertEqual(log.state, "failed")
-        self.assertEqual(log.error, "Insufficient token scope.")
+        self.assertEqual(log["state"], "failed")
+        self.assertEqual(log["error"], "Insufficient token scope.")
 
     @requires_sale_stock
     def test_other_error_reports_failed_run_and_keeps_watermark(self):
@@ -305,9 +305,9 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertEqual(complete["status"], "failed")
         self.assertEqual(complete["sync_type"], "incremental")
         self.assertEqual(complete["error"], "Máximo 500 documentos por envío.")
-        self.assertEqual(log.state, "failed")
-        self.assertEqual(log.error, "Máximo 500 documentos por envío.")
-        self.assertIn("Máximo 500 documentos por envío.", log.kalku_response)
+        self.assertEqual(log["state"], "failed")
+        self.assertEqual(log["error"], "Máximo 500 documentos por envío.")
+        self.assertIn("Máximo 500 documentos por envío.", log["kalku_response"])
         self.assertEqual(self.params.get_param(WATERMARK), "2026-01-01 00:00:00")
 
     @requires_sale_stock
@@ -320,7 +320,7 @@ class TestKalkuSync(KalkuSyncCase):
             }
         )
         log = self.sync(fake)
-        self.assertEqual(log.state, "done")
+        self.assertEqual(log["state"], "done")
         self.sleep.assert_called_once_with(0)
         sales = fake.payloads(SALES)
         self.assertEqual(len(sales), 2)
@@ -338,8 +338,8 @@ class TestKalkuSync(KalkuSyncCase):
         _readers, source, since = read_sales.call_args.args
         self.assertEqual(source, "orders")
         self.assertEqual(since, fields.Datetime.from_string("2026-11-04 10:00:00"))
-        self.assertEqual(log.sync_type, "incremental")
-        self.assertEqual(log.state, "done")
+        self.assertEqual(log["sync_type"], "incremental")
+        self.assertEqual(log["state"], "done")
 
     @requires_sale_stock
     def test_watermark_of_another_source_reads_everything(self):
@@ -352,7 +352,7 @@ class TestKalkuSync(KalkuSyncCase):
         ) as read_sales:
             log = self.sync(FakeKalku(sales_source_loaded="orders"))
         self.assertIsNone(read_sales.call_args.args[2])
-        self.assertEqual(log.sync_type, "full")
+        self.assertEqual(log["sync_type"], "full")
         self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
 
     @requires_sale_stock
@@ -364,7 +364,7 @@ class TestKalkuSync(KalkuSyncCase):
         ) as read_sales:
             log = self.sync(FakeKalku(), sync_type="full")
         self.assertIsNone(read_sales.call_args.args[2])
-        self.assertEqual(log.sync_type, "full")
+        self.assertEqual(log["sync_type"], "full")
 
     @requires_sale_stock
     def test_interrupted_switch_retracts_the_whole_old_list_again(self):
@@ -377,7 +377,7 @@ class TestKalkuSync(KalkuSyncCase):
         )
         with patch.object(kalku_sync, "CHUNK_NUMBERS", 1):
             log = self.sync(first)
-            self.assertEqual(log.state, "failed")
+            self.assertEqual(log["state"], "failed")
             self.assertEqual(
                 [p["previous_source_retract"] for p in first.payloads(SALES)],
                 [["INV/2026/0007"], ["RINV/2026/0002"]],
@@ -394,7 +394,7 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertEqual(len(sales), 3)
         self.assertEqual(sales[2]["previous_source_retract"], [])
         self.assertEqual({row["doc_number"] for row in sales[2]["rows"]}, {"S00042"})
-        self.assertEqual((log.state, log.sync_type), ("done", "full"))
+        self.assertEqual((log["state"], log["sync_type"]), ("done", "full"))
         self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
 
     @requires_sale_stock
@@ -408,7 +408,7 @@ class TestKalkuSync(KalkuSyncCase):
         )
         with patch.object(kalku_sync, "CHUNK_NUMBERS", 1):
             log = self.sync(first)
-            self.assertEqual(log.state, "failed")
+            self.assertEqual(log["state"], "failed")
             self.assertEqual(self.params.get_param(PENDING), "invoices")
             # Kalku took the new source with the first slice.
             second = FakeKalku(sales_source_loaded="orders")
@@ -421,7 +421,7 @@ class TestKalkuSync(KalkuSyncCase):
         )
         self.assertEqual(len(sales), 3)
         self.assertEqual({row["doc_number"] for row in sales[2]["rows"]}, {"S00042"})
-        self.assertEqual((log.state, log.sync_type), ("done", "full"))
+        self.assertEqual((log["state"], log["sync_type"]), ("done", "full"))
         self.assertFalse(self.params.get_param(PENDING))
         self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
 
@@ -435,6 +435,22 @@ class TestKalkuSync(KalkuSyncCase):
         self.sync(fake)
         self.assertEqual(fake.payloads(SALES)[0]["previous_source"], "invoices")
         self.assertEqual(self.params.get_param(PENDING), "invoices")
+
+    def test_pending_marker_is_read_past_a_stale_cache(self):
+        # This process caches "no marker" ...
+        self.assertFalse(self.params.get_param(PENDING))
+        # ... while another worker commits one without telling this process.
+        with patch.object(type(self.registry), "clear_cache", lambda *args, **kwargs: None):
+            self.env["kalku.sync"]._commit_param(PENDING, "invoices")
+        self.assertFalse(self.params.get_param(PENDING))
+        self.assertEqual(self.env["kalku.sync"]._previous_source("orders", {}), "invoices")
+
+    def test_run_returns_its_log_values(self):
+        self.configure(sync_sales="False", sync_stock="True")
+        result = self.sync(FakeKalku())
+        self.assertEqual(set(result), {"id", *kalku_sync.LOG_FIELDS})
+        self.assertEqual(result["state"], "done")
+        self.assertEqual(result["id"], self.last_log().id)
 
     @requires_sale_stock
     def test_next_run_closes_a_run_that_died(self):
@@ -482,6 +498,12 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertEqual(log.state, "failed")
         self.assertEqual(log.error, refusal.args[0])
         self.assertEqual(fake.payloads(COMPLETE)[0]["status"], "failed")
+
+    def test_cron_logs_other_refusals_as_failures(self):
+        # Not the lock: an unknown sales source stops the run before its log.
+        self.configure(sales_source="weekly")
+        with self.assertLogs("odoo.addons.kalku_connector.models.kalku_sync", "ERROR"):
+            self.assertIsNone(self.sync(FakeKalku(), method="_run_scheduled"))
 
     def test_cron_without_configuration_does_nothing(self):
         self.configure(url="")

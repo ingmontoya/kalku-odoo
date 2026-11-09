@@ -126,9 +126,7 @@ class ResConfigSettings(models.TransientModel):
             return _notification(
                 _("Sync started; check Inventory > Configuration > Kalku > Sync log."), "info"
             )
-        log = sync._run()
-        # Read on a fresh cursor: this request's transaction predates the log row.
-        result = sync._log_values(log.id, ["state", "error"])
+        result = sync._run()
         if result["state"] == "failed":
             return _notification(_("Sync failed: %s", result["error"]), "danger")
         return _notification(

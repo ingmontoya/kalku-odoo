@@ -84,9 +84,11 @@ respeta aunque después se sincronice con otra empresa activa.
   token, la sincronización se detiene en ese punto; ante cualquier error, la
   siguiente vuelve a enviar el mismo periodo, y Kalku no duplica lo que ya
   recibió.
-- Nunca corren dos sincronizaciones a la vez: si la acción programada y
-  "Sincronizar ahora" coinciden, la segunda se rechaza con el aviso "Ya hay una
-  sincronización con Kalku en curso.".
+- Nunca corren dos sincronizaciones a la vez. Si se pulsa "Sincronizar ahora"
+  mientras otra está en curso, se muestra el aviso "Ya hay una sincronización con
+  Kalku en curso." Si es la acción programada la que coincide con otra, se salta
+  esa vez sin crear fila en el registro y solo deja una línea informativa en el
+  log del servidor.
 - Cada sincronización deja su fila en el registro aunque Odoo la interrumpa. Si
   una queda "En curso" porque Odoo detuvo el proceso, la siguiente la marca como
   fallida.

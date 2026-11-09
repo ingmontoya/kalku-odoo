@@ -49,8 +49,27 @@ MAX_DOCUMENTS_IN_REQUEST = 2000
 OVERLAP = timedelta(hours=24)
 SKIP_REASONS = ("no_default_code", "service", "no_warehouse_code")
 DATASETS = ("sales", "stock", "supplier_terms")
+# What a run returns about its log row (read on a fresh cursor, see _log_values).
+LOG_FIELDS = (
+    "started_at",
+    "finished_at",
+    "sync_type",
+    "dataset",
+    "state",
+    "documents_read",
+    "rows_sent",
+    "skipped_no_default_code",
+    "skipped_service",
+    "skipped_no_warehouse_code",
+    "kalku_response",
+    "error",
+)
 # Postgres advisory lock that keeps two runs (cron and button) from overlapping.
 LOCK_KEY = 0x4B414C4B55
+
+
+class KalkuSyncBusy(UserError):
+    """Another run holds the sync lock."""
 
 
 def _chunks_by(rows, key, size):
@@ -198,14 +217,16 @@ class KalkuSync(models.AbstractModel):
             return
         try:
             self._run()
-        except UserError as exc:
-            # Another run holds the lock.
+        except KalkuSyncBusy as exc:
             _logger.info("Kalku sync skipped: %s", exc.args[0])
         except Exception:
             _logger.exception("Kalku sync could not run.")
 
     @api.model
     def _run(self, sync_type="incremental"):
+        """Run a sync and return its log row's values (``id`` included) as a
+        dict: the row is committed on another cursor, which the caller's
+        transaction may not see."""
         settings = self._settings()
         self._check_configured(settings)
         return self._pinned(settings)._run_pinned(settings, sync_type)
@@ -261,7 +282,7 @@ class KalkuSync(models.AbstractModel):
     def _lock(self):
         self.env.cr.execute("SELECT pg_try_advisory_xact_lock(%s)", [LOCK_KEY])
         if not self.env.cr.fetchone()[0]:
-            raise UserError(_("A Kalku sync is already running."))
+            raise KalkuSyncBusy(_("A Kalku sync is already running."))
 
     # Run ------------------------------------------------------------------
 
@@ -346,6 +367,17 @@ class KalkuSync(models.AbstractModel):
                 progress,
             )
 
+    def _pending_previous_source(self):
+        """The marker read straight from the table: it is written on another
+        cursor, possibly by a run killed in another worker, so the ormcache of
+        ``get_param`` in this process may still hold the old value."""
+        self.env.cr.execute(
+            "SELECT value FROM ir_config_parameter WHERE key = %s",
+            [PARAM_PENDING_PREVIOUS_SOURCE],
+        )
+        row = self.env.cr.fetchone()
+        return row[0] if row else None
+
     def _previous_source(self, source, ping):
         """The source whose documents must leave Kalku before ``source`` loads.
 
@@ -357,7 +389,7 @@ class KalkuSync(models.AbstractModel):
         get = self.env["ir.config_parameter"].sudo().get_param
         candidates = (
             ping.get("sales_source_loaded"),
-            get(PARAM_PENDING_PREVIOUS_SOURCE),
+            self._pending_previous_source(),
             get(PARAM_LAST_SYNC_SALES_SOURCE),
         )
         for candidate in candidates:
@@ -458,4 +490,4 @@ class KalkuSync(models.AbstractModel):
                 "kalku_response": json.dumps(response, ensure_ascii=False, indent=2),
             },
         )
-        return self.env["kalku.sync.log"].browse(log_id)
+        return dict(self._log_values(log_id, list(LOG_FIELDS)))
