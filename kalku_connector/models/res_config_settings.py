@@ -3,6 +3,8 @@ from urllib.parse import urlparse
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
+from .kalku_client import KalkuError
+
 PARAM_URL = "kalku.url"
 PARAM_TOKEN = "kalku.token"
 PARAM_SYNC_SALES = "kalku.sync_sales"
@@ -85,7 +87,43 @@ class ResConfigSettings(models.TransientModel):
             params.set_param(PARAM_TOKEN, self.sudo().kalku_token.strip())
 
     def action_kalku_test_connection(self):
-        raise UserError(_("Not implemented yet"))
+        """Ping Kalku with the URL and token on screen (saved or not)."""
+        self.ensure_one()
+        try:
+            answer = self.env["kalku.sync"].test_connection(
+                url=self.kalku_url, token=self.sudo().kalku_token
+            )
+        except KalkuError as exc:
+            raise UserError(exc.message) from exc
+        return _notification(
+            _("Connected to Kalku: %s", answer.get("name") or answer.get("tenant")), "success"
+        )
 
     def action_kalku_sync_now(self):
-        raise UserError(_("Not implemented yet"))
+        """Sync with the saved settings: in the request when small, else via the cron."""
+        self.ensure_one()
+        sync = self.env["kalku.sync"]
+        if not sync.runs_in_request():
+            self.env.ref("kalku_connector.ir_cron_kalku_sync").sudo()._trigger()
+            return _notification(
+                _("Sync started; check Inventory > Configuration > Kalku > Sync log."), "info"
+            )
+        log = sync.run()
+        if log.state == "failed":
+            return _notification(_("Sync failed: %s", log.error), "danger")
+        return _notification(
+            _("Sync finished; check Inventory > Configuration > Kalku > Sync log."), "success"
+        )
+
+
+def _notification(message, kind):
+    return {
+        "type": "ir.actions.client",
+        "tag": "display_notification",
+        "params": {
+            "title": "Kalku",
+            "message": message,
+            "type": kind,
+            "sticky": kind == "danger",
+        },
+    }

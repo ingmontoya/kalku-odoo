@@ -95,6 +95,17 @@ class KalkuReaders(models.AbstractModel):
             "documents": names,
         }
 
+    @api.model
+    def count_sales(self, source, since):
+        """How many documents ``read_sales(source, since)`` would read."""
+        if source == "orders":
+            if "sale.order" not in self.env:
+                return 0
+            return self.env["sale.order"].search_count(self._window(since))
+        if source == "invoices":
+            return self.env["account.move"].search_count(self._invoice_domain(since))
+        raise UserError(_("Unknown sales source: %s", source))
+
     def _window(self, since):
         domain = [("company_id", "=", self.env.company.id)]
         if since:
@@ -140,9 +151,11 @@ class KalkuReaders(models.AbstractModel):
             ]
             yield order.name, order.state in CONFIRMED_ORDER_STATES, header, lines
 
+    def _invoice_domain(self, since):
+        return self._window(since) + [("move_type", "in", ("out_invoice", "out_refund"))]
+
     def _read_invoices(self, since):
-        domain = self._window(since) + [("move_type", "in", ("out_invoice", "out_refund"))]
-        moves = self.env["account.move"].search(domain, order="id")
+        moves = self.env["account.move"].search(self._invoice_domain(since), order="id")
         Warehouse = self.env["stock.warehouse"]
         for move in moves:
             sign = -1 if move.move_type == "out_refund" else 1

@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <!-- The scheduled sync is added together with the sync engine. -->
+<odoo noupdate="1">
+    <!-- Daily incremental sync. nextcall is stored in UTC: 02:30 UTC the day
+         after installation; change it under Settings > Technical > Scheduled
+         Actions. -->
+    <record id="ir_cron_kalku_sync" model="ir.cron">
+        <field name="name">Kalku: sync</field>
+        <field name="model_id" ref="model_kalku_sync"/>
+        <field name="state">code</field>
+        <field name="code">model.run_scheduled()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 02:30:00')"/>
+        <field name="active" eval="True"/>
+    </record>
 </odoo>

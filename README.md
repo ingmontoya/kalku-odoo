@@ -55,6 +55,30 @@ registro de sincronización.
 El token se guarda en `ir.config_parameter` (`kalku.token`) y no se vuelve a
 mostrar después de guardarlo.
 
+"Probar conexión" consulta Kalku con la URL y el token que se ven en pantalla,
+aunque todavía no se hayan guardado, y muestra el nombre de la empresa en Kalku.
+
+## Sincronización
+
+- "Sincronizar ahora" usa la configuración guardada. Si hay hasta 2000
+  documentos de venta por leer, sincroniza en el momento; si hay más, deja la
+  tarea a la acción programada y avisa que el resultado aparecerá en el registro
+  de sincronización.
+- La acción programada "Kalku: sincronización" corre una vez al día (la primera
+  vez a las 02:30 UTC del día siguiente a la instalación; la hora se cambia en
+  Ajustes > Técnico > Acciones programadas). Envía las ventas, el stock y los
+  tiempos de entrega de la empresa de su usuario.
+- La primera sincronización envía todas las ventas. Las siguientes envían los
+  documentos modificados desde la última sincronización exitosa, con 24 horas de
+  margen. El stock y los tiempos de entrega se envían completos cada vez.
+- Si la fuente de las ventas cambia (de facturas a pedidos o al revés), primero
+  se retiran en Kalku los documentos de la fuente anterior y luego se envía la
+  nueva desde el inicio.
+- Los datos van en lotes de 500 documentos o 500 productos. Si Kalku rechaza el
+  token, la sincronización se detiene en ese punto; ante cualquier error, la
+  siguiente vuelve a enviar el mismo periodo, y Kalku no duplica lo que ya
+  recibió.
+
 ## Desarrollo
 
 Las pruebas de ventas necesitan `sale_stock` (el almacén del pedido), que el

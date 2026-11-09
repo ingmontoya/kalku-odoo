@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0-20261102\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 02:11+0000\n"
-"PO-Revision-Date: 2026-11-09 02:11+0000\n"
+"POT-Creation-Date: 2026-11-09 02:52+0000\n"
+"PO-Revision-Date: 2026-11-09 02:52+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -38,8 +38,20 @@ msgid ""
 msgstr ""
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "Choose at least one dataset to send."
+msgstr ""
+
+#. module: kalku_connector
 #: model:ir.model,name:kalku_connector.model_res_config_settings
 msgid "Config Settings"
+msgstr ""
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Connected to Kalku: %s"
 msgstr ""
 
 #. module: kalku_connector
@@ -153,6 +165,11 @@ msgid "Kalku response (JSON)"
 msgstr ""
 
 #. module: kalku_connector
+#: model:ir.model,name:kalku_connector.model_kalku_sync
+msgid "Kalku sync"
+msgstr ""
+
+#. module: kalku_connector
 #: model:ir.model,name:kalku_connector.model_kalku_sync_log
 msgid "Kalku sync log"
 msgstr ""
@@ -160,6 +177,11 @@ msgstr ""
 #. module: kalku_connector
 #: model:ir.model.fields,field_description:kalku_connector.field_res_config_settings__kalku_token
 msgid "Kalku token"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.actions.server,name:kalku_connector.ir_cron_kalku_sync_ir_actions_server
+msgid "Kalku: sync"
 msgstr ""
 
 #. module: kalku_connector
@@ -175,12 +197,6 @@ msgstr ""
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Lead times per product and supplier, for the reorder points."
-msgstr ""
-
-#. module: kalku_connector
-#. odoo-python
-#: code:addons/kalku_connector/models/res_config_settings.py:0
-msgid "Not implemented yet"
 msgstr ""
 
 #. module: kalku_connector
@@ -243,6 +259,12 @@ msgid "Send supplier lead times"
 msgstr ""
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "Set the Kalku URL and token first."
+msgstr ""
+
+#. module: kalku_connector
 #: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_default_code
 msgid "Skipped: no internal reference"
 msgstr ""
@@ -289,6 +311,18 @@ msgid "Sync Type"
 msgstr ""
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Sync failed: %s"
+msgstr ""
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Sync finished; check Inventory > Configuration > Kalku > Sync log."
+msgstr ""
+
+#. module: kalku_connector
 #: model:ir.actions.act_window,name:kalku_connector.kalku_sync_log_action
 #: model:ir.ui.menu,name:kalku_connector.menu_kalku_sync_log
 msgid "Sync log"
@@ -297,6 +331,12 @@ msgstr ""
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Sync now"
+msgstr ""
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/res_config_settings.py:0
+msgid "Sync started; check Inventory > Configuration > Kalku > Sync log."
 msgstr ""
 
 #. module: kalku_connector

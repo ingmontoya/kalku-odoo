@@ -241,3 +241,12 @@ class TestKalkuReaders(KalkuFixtureCase):
         result = self.readers().read_stock(date(2026, 11, 8))
         self.assertEqual(result["skipped"], self.fixture["inventory"]["skipped"])
         self.assertNotIn("ETQ-001", [row["product_key"] for row in result["rows"]])
+
+    @requires_sale_stock
+    def test_count_sales_matches_read_sales(self):
+        for source in ("orders", "invoices"):
+            with self.subTest(source=source):
+                self.assertEqual(
+                    self.readers().count_sales(source, None),
+                    len(self.readers().read_sales(source, None)["documents"]),
+                )
