@@ -2,6 +2,10 @@
 
 Lista de pasos para publicar `kalku_connector`. Los realiza el propietario del repositorio.
 
+> Aviso: los pasos de la interfaz de apps.odoo.com están escritos de memoria y no se
+> comprobaron en el sitio. Los nombres de menús y botones pueden haber cambiado;
+> verificarlos en el sitio en vivo antes de seguirlos.
+
 ## Antes de empezar
 
 - El repositorio tiene dos ramas de versión: `17.0` y `18.0`. Ambas deben estar subidas a GitHub.
@@ -25,6 +29,6 @@ Lista de pasos para publicar `kalku_connector`. Los realiza el propietario del r
 
 ## Verificación final
 
-- Abrir el enlace de la ficha que se incluye en el mensaje del grupo y comprobar que carga.
+- Abrir el enlace de la ficha del módulo en apps.odoo.com y comprobar que carga.
 - Comprobar que aparecen las dos versiones (17.0 y 18.0) y que se puede descargar cada una.
 - Si el enlace no resuelve, revisar que la llave de despliegue esté activa y que las ramas estén registradas.
