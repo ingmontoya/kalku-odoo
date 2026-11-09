@@ -1,6 +1,6 @@
 # Kalku Connector
 
-Módulo de Odoo 18 (LGPL-3) que lee las ventas, el stock y los tiempos de entrega
+Módulo de Odoo 17 (LGPL-3) que lee las ventas, el stock y los tiempos de entrega
 de los proveedores en Odoo y los envía a [Kalku](https://kalku.co), un servicio
 de pronóstico de demanda y planeación de inventario.
 
