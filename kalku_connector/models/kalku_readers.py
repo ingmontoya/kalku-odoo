@@ -11,6 +11,12 @@ from .compat import CONFIRMED_ORDER_STATES, is_service, is_storable
 
 SALES_SOURCES = ("orders", "invoices")
 
+# Kalku's limits (ConnectorSalesRequest, ConnectorSupplierTermsRequest): one
+# value over them makes Kalku refuse the whole request, every run.
+MAX_NAME = 255
+MAX_DOC_NUMBER = 200
+MAX_SUPPLIER_ID = 50
+
 
 def _round(value):
     return round(value or 0.0, 4)
@@ -21,10 +27,14 @@ def _product_key(product):
     return (product.default_code or "").strip() or None
 
 
+def _cut(value, size):
+    return value[:size] if value else value
+
+
 def _product_name(product):
     """The variant's name with its attribute values ("Camisa (S)"), without the
     internal reference that Odoo prefixes by default."""
-    return product.with_context(display_default_code=False).display_name
+    return _cut(product.with_context(display_default_code=False).display_name, MAX_NAME)
 
 
 def _partner_identity(partner):
@@ -69,6 +79,8 @@ class KalkuReaders(models.AbstractModel):
             if not name or name == "/":
                 # A draft that never got a number was never sent to Kalku.
                 continue
+            # Cut once, so rows, retractions and the document list agree.
+            name = _cut(name, MAX_DOC_NUMBER)
             names.append(name)
             doc_rows = []
             if confirmed:
@@ -80,8 +92,8 @@ class KalkuReaders(models.AbstractModel):
                     if location is None:
                         skipped["no_warehouse_code"] += 1
                     doc_rows.append(
-                        dict(header, product_key=key, product_name=_product_name(product),
-                             location=location, **values)
+                        dict(header, doc_number=name, product_key=key,
+                             product_name=_product_name(product), location=location, **values)
                     )
             if doc_rows:
                 rows.extend(doc_rows)
@@ -117,7 +129,7 @@ class KalkuReaders(models.AbstractModel):
         return {
             "date": doc_date.isoformat(),
             "customer_key": customer_key,
-            "customer_name": commercial.name,
+            "customer_name": _cut(commercial.name, MAX_NAME),
             "cost": None,
             "delivery_point": None,
             "doc_type": None,
@@ -279,9 +291,9 @@ class KalkuReaders(models.AbstractModel):
                     {
                         "product_key": key,
                         "supplier_key": supplier_key,
-                        "supplier_name": supplier.name,
-                        "supplier_id": vat,
-                        "lead_time_days": info.delay,
+                        "supplier_name": _cut(supplier.name, MAX_NAME),
+                        "supplier_id": _cut(vat, MAX_SUPPLIER_ID),
+                        "lead_time_days": max(0, info.delay or 0),
                         "min_order_qty": _round(info.min_qty) or None,
                         "unit_price": _round(info.price) or None,
                         "is_preferred": product.id not in preferred_seen,

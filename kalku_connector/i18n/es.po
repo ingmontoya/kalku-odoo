@@ -5,6 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-09 12:58+0000\n"
 "Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -36,7 +38,9 @@ msgstr "Automática"
 msgid ""
 "Automatic uses sales orders when the Sales app is installed and customer "
 "invoices otherwise."
-msgstr "Automática usa los pedidos de venta si la app de Ventas está instalada y las facturas de cliente en caso contrario."
+msgstr ""
+"Automática usa los pedidos de venta si la app de Ventas está instalada y las "
+"facturas de cliente en caso contrario."
 
 #. module: kalku_connector
 #. odoo-python
@@ -49,6 +53,12 @@ msgstr "Elige al menos un conjunto de datos para enviar."
 #: code:addons/kalku_connector/models/kalku_sync.py:0
 msgid "Choose the company whose data is sent to Kalku."
 msgstr "Elige la empresa cuyos datos se envían a Kalku."
+
+#. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "Choose to send sales first."
+msgstr "Primero marca el envío de ventas."
 
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
@@ -65,7 +75,9 @@ msgstr "Empresa que se envía"
 msgid ""
 "Company whose sales, stock and supplier lead times are sent, whichever "
 "company is active when you sync."
-msgstr "Empresa cuyas ventas, existencias y plazos de entrega de proveedores se envían, sin importar qué empresa esté activa al sincronizar."
+msgstr ""
+"Empresa cuyas ventas, existencias y plazos de entrega de proveedores se "
+"envían, sin importar qué empresa esté activa al sincronizar."
 
 #. module: kalku_connector
 #: model:ir.model,name:kalku_connector.model_res_config_settings
@@ -95,8 +107,8 @@ msgstr "Creado el"
 
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
-msgid "Current stock per warehouse."
-msgstr "Existencias actuales por almacén."
+msgid "Current stock per product, summed across all warehouses."
+msgstr "Existencias actuales de cada producto, sumando todos los almacenes."
 
 #. module: kalku_connector
 #: model:ir.model.fields.selection,name:kalku_connector.selection__res_config_settings__kalku_sales_source__invoices
@@ -148,7 +160,9 @@ msgstr "Completa"
 msgid ""
 "Generate it in Kalku > Settings > Integrations > \"Odoo (módulo)\" > "
 "\"Generar token\". Leave empty to keep the saved one."
-msgstr "Genéralo en Kalku > Configuración > Integraciones > \"Odoo (módulo)\" > \"Generar token\". Déjalo vacío para conservar el guardado."
+msgstr ""
+"Genéralo en Kalku > Configuración > Integraciones > \"Odoo (módulo)\" > "
+"\"Generar token\". Déjalo vacío para conservar el guardado."
 
 #. module: kalku_connector
 #: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__id
@@ -174,6 +188,7 @@ msgstr "URL de Kalku"
 
 #. module: kalku_connector
 #. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
 #: code:addons/kalku_connector/models/res_config_settings.py:0
 msgid "Kalku URL must use https."
 msgstr "La URL de Kalku debe usar https."
@@ -221,7 +236,8 @@ msgstr "Última actualización el"
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Lead times per product and supplier, for the reorder points."
-msgstr "Plazos de entrega por producto y proveedor, para los puntos de reorden."
+msgstr ""
+"Plazos de entrega por producto y proveedor, para los puntos de reorden."
 
 #. module: kalku_connector
 #. odoo-python
@@ -239,7 +255,14 @@ msgstr "Pega el token aquí"
 msgid ""
 "Products without an internal reference are skipped and reported in the sync "
 "log."
-msgstr "Los productos sin referencia interna se omiten y se informan en el registro de sincronización."
+msgstr ""
+"Los productos sin referencia interna se omiten y se informan en el registro "
+"de sincronización."
+
+#. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Resend all sales"
+msgstr "Reenviar todas las ventas"
 
 #. module: kalku_connector
 #: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__rows_sent
@@ -289,6 +312,18 @@ msgid "Send supplier lead times"
 msgstr "Enviar plazos de entrega de proveedores"
 
 #. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Sends every sales document again, as the first sync did. Use it after giving "
+"products an internal reference or warehouses a code: documents already sent "
+"are not read again otherwise."
+msgstr ""
+"Vuelve a enviar todos los documentos de venta, como la primera "
+"sincronización. Úsalo después de ponerles referencia interna a los "
+"productos o código a los almacenes: si no, los documentos ya enviados no se "
+"vuelven a leer."
+
+#. module: kalku_connector
 #. odoo-python
 #: code:addons/kalku_connector/models/kalku_sync.py:0
 msgid "Set the Kalku URL and token first."
@@ -298,11 +333,6 @@ msgstr "Primero configura la URL de Kalku y el token."
 #: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_default_code
 msgid "Skipped: no internal reference"
 msgstr "Omitidos: sin referencia interna"
-
-#. module: kalku_connector
-#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_warehouse_code
-msgid "Skipped: no warehouse code"
-msgstr "Omitidos: sin código de almacén"
 
 #. module: kalku_connector
 #: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_service
@@ -350,7 +380,9 @@ msgstr "La sincronización falló: %s"
 #. odoo-python
 #: code:addons/kalku_connector/models/res_config_settings.py:0
 msgid "Sync finished; check Inventory > Configuration > Kalku > Sync log."
-msgstr "Sincronización terminada; revisa Inventario > Configuración > Kalku > Registro de sincronización."
+msgstr ""
+"Sincronización terminada; revisa Inventario > Configuración > Kalku > "
+"Registro de sincronización."
 
 #. module: kalku_connector
 #: model:ir.actions.act_window,name:kalku_connector.kalku_sync_log_action
@@ -367,7 +399,9 @@ msgstr "Sincronizar ahora"
 #. odoo-python
 #: code:addons/kalku_connector/models/res_config_settings.py:0
 msgid "Sync started; check Inventory > Configuration > Kalku > Sync log."
-msgstr "Sincronización iniciada; revisa Inventario > Configuración > Kalku > Registro de sincronización."
+msgstr ""
+"Sincronización iniciada; revisa Inventario > Configuración > Kalku > "
+"Registro de sincronización."
 
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
@@ -383,7 +417,8 @@ msgstr "Probar conexión"
 #. odoo-python
 #: code:addons/kalku_connector/models/kalku_readers.py:0
 msgid "The Sales app is not installed: send sales from invoices instead."
-msgstr "La app de Ventas no está instalada: envía las ventas desde las facturas."
+msgstr ""
+"La app de Ventas no está instalada: envía las ventas desde las facturas."
 
 #. module: kalku_connector
 #. odoo-python
@@ -391,7 +426,9 @@ msgstr "La app de Ventas no está instalada: envía las ventas desde las factura
 msgid ""
 "The sync stopped before finishing, for example because Odoo's time limit "
 "ended it."
-msgstr "La sincronización se detuvo antes de terminar, por ejemplo porque el límite de tiempo de Odoo la interrumpió."
+msgstr ""
+"La sincronización se detuvo antes de terminar, por ejemplo porque el límite "
+"de tiempo de Odoo la interrumpió."
 
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
@@ -414,6 +451,11 @@ msgstr "Fuente de ventas desconocida: %s"
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "What to send"
 msgstr "Qué enviar"
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_warehouse_code
+msgid "Without warehouse code (default center)"
+msgstr "Sin código de almacén (centro por defecto)"
 
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku

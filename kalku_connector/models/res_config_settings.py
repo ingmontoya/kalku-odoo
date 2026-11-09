@@ -120,13 +120,25 @@ class ResConfigSettings(models.TransientModel):
         """Sync with the saved settings: in the request when small, else via the cron."""
         self._check_kalku_admin()
         self.ensure_one()
+        return self._kalku_sync("incremental")
+
+    def action_kalku_resend_sales(self):
+        """Send every sales document again, as the first sync did: for example
+        after giving products an internal reference or warehouses a code, which
+        does not touch the documents already sent."""
+        self._check_kalku_admin()
+        self.ensure_one()
+        self.env["kalku.sync"]._forget_sales_watermark()
+        return self._kalku_sync("full")
+
+    def _kalku_sync(self, sync_type):
         sync = self.env["kalku.sync"]
         if not sync._runs_in_request():
             self.env.ref("kalku_connector.ir_cron_kalku_sync").sudo()._trigger()
             return _notification(
                 _("Sync started; check Inventory > Configuration > Kalku > Sync log."), "info"
             )
-        result = sync._run()
+        result = sync._run(sync_type)
         if result["state"] == "failed":
             return _notification(_("Sync failed: %s", result["error"]), "danger")
         return _notification(

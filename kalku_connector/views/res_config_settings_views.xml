@@ -41,7 +41,7 @@
                             <field name="kalku_sales_source"/>
                         </setting>
                         <setting string="Stock"
-                                 help="Current stock per warehouse.">
+                                 help="Current stock per product, summed across all warehouses.">
                             <field name="kalku_sync_stock"/>
                         </setting>
                         <setting string="Supplier lead times"
@@ -53,6 +53,11 @@
                         <setting help="Products without an internal reference are skipped and reported in the sync log.">
                             <button name="action_kalku_sync_now" type="object"
                                     string="Sync now" class="btn-primary"/>
+                        </setting>
+                        <setting invisible="not kalku_sync_sales"
+                                 help="Sends every sales document again, as the first sync did. Use it after giving products an internal reference or warehouses a code: documents already sent are not read again otherwise.">
+                            <button name="action_kalku_resend_sales" type="object"
+                                    string="Resend all sales" class="btn-secondary"/>
                         </setting>
                     </block>
                 </app>

@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0-20261102\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-09 03:23+0000\n"
-"PO-Revision-Date: 2026-11-09 03:23+0000\n"
+"POT-Creation-Date: 2026-11-09 12:58+0000\n"
+"PO-Revision-Date: 2026-11-09 12:58+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -56,6 +56,12 @@ msgid "Choose the company whose data is sent to Kalku."
 msgstr ""
 
 #. module: kalku_connector
+#. odoo-python
+#: code:addons/kalku_connector/models/kalku_sync.py:0
+msgid "Choose to send sales first."
+msgstr ""
+
+#. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "Company"
 msgstr ""
@@ -100,7 +106,7 @@ msgstr ""
 
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
-msgid "Current stock per warehouse."
+msgid "Current stock per product, summed across all warehouses."
 msgstr ""
 
 #. module: kalku_connector
@@ -248,6 +254,11 @@ msgid ""
 msgstr ""
 
 #. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid "Resend all sales"
+msgstr ""
+
+#. module: kalku_connector
 #: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__rows_sent
 msgid "Rows Sent"
 msgstr ""
@@ -295,6 +306,14 @@ msgid "Send supplier lead times"
 msgstr ""
 
 #. module: kalku_connector
+#: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
+msgid ""
+"Sends every sales document again, as the first sync did. Use it after giving"
+" products an internal reference or warehouses a code: documents already sent"
+" are not read again otherwise."
+msgstr ""
+
+#. module: kalku_connector
 #. odoo-python
 #: code:addons/kalku_connector/models/kalku_sync.py:0
 msgid "Set the Kalku URL and token first."
@@ -303,11 +322,6 @@ msgstr ""
 #. module: kalku_connector
 #: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_default_code
 msgid "Skipped: no internal reference"
-msgstr ""
-
-#. module: kalku_connector
-#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_warehouse_code
-msgid "Skipped: no warehouse code"
 msgstr ""
 
 #. module: kalku_connector
@@ -419,6 +433,11 @@ msgstr ""
 #. module: kalku_connector
 #: model_terms:ir.ui.view,arch_db:kalku_connector.res_config_settings_view_form_kalku
 msgid "What to send"
+msgstr ""
+
+#. module: kalku_connector
+#: model:ir.model.fields,field_description:kalku_connector.field_kalku_sync_log__skipped_no_warehouse_code
+msgid "Without warehouse code (default center)"
 msgstr ""
 
 #. module: kalku_connector

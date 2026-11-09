@@ -5,8 +5,9 @@
     "description": """
 Reads sales, stock and supplier lead times from Odoo and sends them to Kalku,
 which computes the demand forecast and the reorder points. This module does not
-forecast anything and does not write to Odoo core models. It does not work on
-Odoo Online (SaaS).
+forecast anything and only writes its own settings (``kalku.*`` system
+parameters), its sync log and the trigger of its scheduled action. It does not
+work on Odoo Online (SaaS).
 """,
     "author": "Mauricio Montoya",
     "website": "https://kalku.co",
@@ -20,6 +21,7 @@ Odoo Online (SaaS).
         "views/res_config_settings_views.xml",
         "data/ir_cron.xml",
     ],
+    "uninstall_hook": "uninstall_hook",
     "installable": True,
     "application": False,
 }

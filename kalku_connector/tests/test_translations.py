@@ -16,3 +16,9 @@ class TestKalkuTranslations(TransactionCase):
             field._description_string(self.env(context={"lang": "es_ES"})),
             "Omitidos: sin referencia interna",
         )
+        field = self.env["kalku.sync.log"]._fields["skipped_no_warehouse_code"]
+        self.assertEqual(field.string, "Without warehouse code (default center)")
+        self.assertEqual(
+            field._description_string(self.env(context={"lang": "es_ES"})),
+            "Sin código de almacén (centro por defecto)",
+        )

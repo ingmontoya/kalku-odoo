@@ -499,18 +499,36 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertEqual(log.error, refusal.args[0])
         self.assertEqual(fake.payloads(COMPLETE)[0]["status"], "failed")
 
-    def test_cron_logs_other_refusals_as_failures(self):
-        # Not the lock: an unknown sales source stops the run before its log.
+    def test_cron_records_other_refusals_as_failed_runs(self):
+        # Not the lock: an unknown sales source stops the run before Kalku is called.
         self.configure(sales_source="weekly")
-        with self.assertLogs("odoo.addons.kalku_connector.models.kalku_sync", "ERROR"):
-            self.assertIsNone(self.sync(FakeKalku(), method="_run_scheduled"))
-
-    def test_cron_without_configuration_does_nothing(self):
-        self.configure(url="")
         fake = FakeKalku()
-        self.assertIsNone(self.sync(fake, method="_run_scheduled"))
+        with self.assertNoLogs("odoo.addons.kalku_connector.models.kalku_sync", "ERROR"):
+            self.assertIsNone(self.sync(fake, method="_run_scheduled"))
         self.assertEqual(fake.calls, [])
-        self.assertFalse(self.last_log())
+        log = self.last_log()
+        self.assertEqual(log.state, "failed")
+        self.assertEqual(log.error, "Unknown sales source: weekly")
+
+    def test_cron_records_a_configuration_error(self):
+        cases = (
+            ({"url": ""}, "Set the Kalku URL and token first."),
+            ({"token": ""}, "Set the Kalku URL and token first."),
+            ({"company_id": "0"}, "Choose the company whose data is sent to Kalku."),
+        )
+        for values, message in cases:
+            with self.subTest(values=values):
+                self.configure(url=BASE, token="plain-token", company_id=str(self.company_a.id))
+                self.configure(**values)
+                fake = FakeKalku()
+                before = self.env["kalku.sync.log"].search_count([])
+                self.assertIsNone(self.sync(fake, method="_run_scheduled"))
+                self.assertEqual(fake.calls, [])
+                self.assertEqual(self.env["kalku.sync.log"].search_count([]), before + 1)
+                log = self.last_log()
+                self.assertEqual(log.state, "failed")
+                self.assertEqual(log.error, message)
+                self.assertTrue(log.finished_at)
 
     def test_run_without_configuration_is_refused(self):
         self.configure(token="")
@@ -573,7 +591,11 @@ class TestKalkuSettingsButtons(KalkuSyncCase):
             self._user("kalku_portal", "base.group_portal"),
         )
         for user in users:
-            for method in ("action_kalku_test_connection", "action_kalku_sync_now"):
+            for method in (
+                "action_kalku_test_connection",
+                "action_kalku_sync_now",
+                "action_kalku_resend_sales",
+            ):
                 with self.subTest(user=user.login, method=method):
                     fake = FakeKalku()
                     model = self.env["res.config.settings"].with_user(user)
@@ -586,7 +608,13 @@ class TestKalkuSettingsButtons(KalkuSyncCase):
                     self.assertEqual(fake.calls, [])
 
     def test_sync_methods_cannot_be_called_remotely(self):
-        for name in ("_run", "_run_scheduled", "_runs_in_request", "_test_connection"):
+        for name in (
+            "_run",
+            "_run_scheduled",
+            "_runs_in_request",
+            "_test_connection",
+            "_forget_sales_watermark",
+        ):
             with self.subTest(name=name), self.assertRaises(AccessError):
                 get_public_method(self.env["kalku.sync"], name)
 
@@ -657,6 +685,55 @@ class TestKalkuSettingsButtons(KalkuSyncCase):
             action["params"]["message"],
             "Sync started; check Inventory > Configuration > Kalku > Sync log.",
         )
+
+
+    @requires_sale_stock
+    def test_resend_sales_reads_everything_in_the_request(self):
+        # A watermark this late reads nothing incrementally.
+        self.set_watermark("2099-01-01 00:00:00")
+        fake = FakeKalku(sales_source_loaded="orders")
+        with patch("requests.Session.request", side_effect=fake):
+            action = self._settings().action_kalku_resend_sales()
+        sales = fake.payloads(SALES)
+        self.assertEqual({row["doc_number"] for p in sales for row in p["rows"]}, {"S00042"})
+        self.assertEqual(fake.paths()[-1], COMPLETE)
+        log = self.last_log()
+        self.assertEqual((log.state, log.sync_type), ("done", "full"))
+        self.assertEqual(action["params"]["type"], "success")
+        self.assertEqual(self.params.get_param(WATERMARK), fields.Datetime.to_string(log.started_at))
+
+    @requires_sale_stock
+    def test_resend_sales_hands_large_runs_to_a_full_cron_run(self):
+        self.set_watermark("2099-01-01 00:00:00")
+        cron = self.env.ref("kalku_connector.ir_cron_kalku_sync")
+        Trigger = self.env["ir.cron.trigger"].sudo()
+        before = Trigger.search_count([("cron_id", "=", cron.id)])
+        fake = FakeKalku()
+        with patch.object(kalku_sync, "MAX_DOCUMENTS_IN_REQUEST", 1), patch(
+            "requests.Session.request", side_effect=fake
+        ):
+            action = self._settings().action_kalku_resend_sales()
+        self.assertEqual(fake.calls, [])
+        self.assertEqual(Trigger.search_count([("cron_id", "=", cron.id)]), before + 1)
+        self.assertEqual(action["params"]["type"], "info")
+        # The scheduled run that follows reads every document again.
+        fake = FakeKalku(sales_source_loaded="orders")
+        self.sync(fake, method="_run_scheduled")
+        sales = fake.payloads(SALES)
+        self.assertEqual({row["doc_number"] for p in sales for row in p["rows"]}, {"S00042"})
+        self.assertEqual(self.last_log().sync_type, "full")
+
+    def test_resend_sales_needs_sales_ticked(self):
+        self.configure(sync_sales="False", sync_stock="True")
+        self.set_watermark("2026-11-05 10:00:00")
+        fake = FakeKalku()
+        with patch("requests.Session.request", side_effect=fake), self.assertRaises(
+            UserError
+        ) as raised:
+            self._settings().action_kalku_resend_sales()
+        self.assertEqual(str(raised.exception), "Choose to send sales first.")
+        self.assertEqual(fake.calls, [])
+        self.assertEqual(self.params.get_param(WATERMARK), "2026-11-05 10:00:00")
 
 
 @tagged("post_install", "-at_install")
@@ -869,6 +946,17 @@ class TestKalkuSyncCommittedLog(PlainSyncCase):
         self.assertEqual(
             [(log["state"], log["error"]) for log in self.committed_logs()],
             [("failed", "Server Error")],
+        )
+
+
+    def test_cron_configuration_error_is_committed(self):
+        self.env["ir.config_parameter"].sudo().set_param("kalku.token", "")
+        fake = FakeKalku()
+        self.sync(fake, method="_run_scheduled")
+        self.assertEqual(fake.calls, [])
+        self.assertEqual(
+            [(log["state"], log["error"]) for log in self.committed_logs()],
+            [("failed", "Set the Kalku URL and token first.")],
         )
 
 

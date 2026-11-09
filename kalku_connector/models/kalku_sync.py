@@ -209,18 +209,46 @@ class KalkuSync(models.AbstractModel):
 
     @api.model
     def _run_scheduled(self):
-        """Cron entry point: never raises, does nothing until configured."""
-        try:
-            self._check_configured(self._settings())
-        except UserError as exc:
-            _logger.info("Kalku sync skipped: %s", exc.args[0])
-            return
+        """Cron entry point: never raises. A run another one holds the lock for
+        is skipped; a setting that stops the run (no URL, token or company, an
+        unknown sales source) leaves a failed row in the sync log, where the
+        administrator looks, instead of only a line in the server log."""
         try:
             self._run()
         except KalkuSyncBusy as exc:
             _logger.info("Kalku sync skipped: %s", exc.args[0])
+        except UserError as exc:
+            _logger.info("Kalku sync not run: %s", exc.args[0])
+            now = fields.Datetime.now()
+            self._log_write(
+                None,
+                {
+                    "started_at": now,
+                    "finished_at": now,
+                    "sync_type": "incremental",
+                    "dataset": "all",
+                    "state": "failed",
+                    "error": exc.args[0],
+                },
+            )
         except Exception:
             _logger.exception("Kalku sync could not run.")
+
+    @api.model
+    def _forget_sales_watermark(self):
+        """Make the next run send every sales document again ("Resend all
+        sales"), through the button or through the cron it hands off to.
+
+        Only the date is removed: the source stays, so a source switch is still
+        detected. Taken under the sync lock, so a run already going cannot set
+        the date back when it finishes.
+        """
+        settings = self._settings()
+        self._check_configured(settings)
+        if not settings["sales"]:
+            raise UserError(_("Choose to send sales first."))
+        self._lock()
+        self.env["ir.config_parameter"].sudo().set_param(PARAM_LAST_SYNC_SALES, False)
 
     @api.model
     def _run(self, sync_type="incremental"):
