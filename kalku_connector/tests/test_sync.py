@@ -30,6 +30,7 @@ SUPPLIER_TERMS = "/api/connector/supplier-terms"
 COMPLETE = "/api/connector/sync/complete"
 WATERMARK = "kalku.last_sync_at.sales"
 WATERMARK_SOURCE = "kalku.last_sync_source.sales"
+PENDING = "kalku.pending_previous_source.sales"
 INACTIVE_OWNER = (
     "El usuario dueño de este token está inactivo. "
     "Genera un token nuevo en Kalku > Integraciones."
@@ -397,6 +398,45 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
 
     @requires_sale_stock
+    def test_interrupted_first_switch_is_finished_by_the_next_run(self):
+        # A tenant moving from Kalku's pull path (invoices) to the module
+        # (orders): nothing was ever confirmed here.
+        self.assertFalse(self.params.get_param(WATERMARK_SOURCE))
+        first = FakeKalku(
+            sales_source_loaded="invoices",
+            answers={(SALES, 2): response(500, {"message": "Server Error"})},
+        )
+        with patch.object(kalku_sync, "CHUNK_NUMBERS", 1):
+            log = self.sync(first)
+            self.assertEqual(log.state, "failed")
+            self.assertEqual(self.params.get_param(PENDING), "invoices")
+            # Kalku took the new source with the first slice.
+            second = FakeKalku(sales_source_loaded="orders")
+            log = self.sync(second)
+
+        sales = second.payloads(SALES)
+        self.assertEqual(
+            [(p.get("previous_source"), p["previous_source_retract"]) for p in sales[:2]],
+            [("invoices", ["INV/2026/0007"]), ("invoices", ["RINV/2026/0002"])],
+        )
+        self.assertEqual(len(sales), 3)
+        self.assertEqual({row["doc_number"] for row in sales[2]["rows"]}, {"S00042"})
+        self.assertEqual((log.state, log.sync_type), ("done", "full"))
+        self.assertFalse(self.params.get_param(PENDING))
+        self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
+
+    @requires_sale_stock
+    def test_pending_marker_is_kept_until_a_run_confirms(self):
+        self.params.set_param(PENDING, "invoices")
+        fake = FakeKalku(
+            sales_source_loaded="orders",
+            answers={(COMPLETE, 1): response(500, {"message": "Server Error"})},
+        )
+        self.sync(fake)
+        self.assertEqual(fake.payloads(SALES)[0]["previous_source"], "invoices")
+        self.assertEqual(self.params.get_param(PENDING), "invoices")
+
+    @requires_sale_stock
     def test_next_run_closes_a_run_that_died(self):
         dead = self.env["kalku.sync.log"].create({"sync_type": "full", "dataset": "sales"})
         self.assertEqual(dead.state, "running")
@@ -759,6 +799,41 @@ class TestKalkuSyncCommittedLog(PlainSyncCase):
         logs = self.committed_logs()
         self.assertEqual([log["state"] for log in logs], ["failed", "done"])
         self.assertIn("stopped before finishing", logs[0]["error"])
+
+    def test_killed_switch_keeps_its_pending_marker(self):
+        params = self.env["ir.config_parameter"].sudo()
+        params.set_param("kalku.sync_sales", "True")
+        params.set_param("kalku.sales_source", "orders")
+        self.addCleanup(self._delete_committed_param, PENDING)
+        Readers = type(self.env["kalku.readers"])
+        old = {
+            "source": "invoices",
+            "rows": [],
+            "retract": [],
+            "skipped": {"no_default_code": 0, "service": 0, "no_warehouse_code": 0},
+            "documents": ["INV/2026/0007"],
+        }
+        fake = FakeKalku(sales_source_loaded="invoices", answers={(SALES, 1): WorkerKilled()})
+
+        def killing(method, url, **kwargs):
+            answer = fake(method, url, **kwargs)
+            if isinstance(answer, BaseException):
+                raise answer
+            return answer
+
+        with patch.object(Readers, "read_sales", return_value=old), self.assertRaises(
+            WorkerKilled
+        ):
+            self.sync(killing)
+        self.assertEqual(fake.payloads(SALES)[0]["previous_source"], "invoices")
+        # This test's transaction is rolled back; the marker is already committed.
+        with self.registry.cursor() as cr:
+            cr.execute("SELECT value FROM ir_config_parameter WHERE key = %s", [PENDING])
+            self.assertEqual(cr.fetchall(), [("invoices",)])
+
+    def _delete_committed_param(self, key):
+        with self.registry.cursor() as cr:
+            cr.execute("DELETE FROM ir_config_parameter WHERE key = %s", [key])
 
     def test_handled_failure_is_committed(self):
         self.sync(

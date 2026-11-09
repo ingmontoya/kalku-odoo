@@ -33,6 +33,10 @@ _logger = logging.getLogger(__name__)
 PARAM_LAST_SYNC_SALES = "kalku.last_sync_at.sales"
 # The source the watermark belongs to: another source starts from the beginning.
 PARAM_LAST_SYNC_SALES_SOURCE = "kalku.last_sync_source.sales"
+# Set (committed at once) before a switch retracts the old source's documents,
+# cleared when a run confirms: an interrupted switch is resumed by the next run
+# even when Kalku already reports the new source and none was confirmed here.
+PARAM_PENDING_PREVIOUS_SOURCE = "kalku.pending_previous_source.sales"
 
 # Kalku's limits per request (ConnectorSalesRequest, ConnectorInventoryRequest,
 # ConnectorSupplierTermsRequest).
@@ -231,6 +235,16 @@ class KalkuSync(models.AbstractModel):
             return Log.browse(log_id).read(field_names)[0]
 
     @api.model
+    def _commit_param(self, key, value):
+        """Set (or, with a falsy value, remove) a parameter on its own committed
+        cursor, so it outlives this run's transaction. The run never writes this
+        key on its own cursor, which keeps the two from contending for the row."""
+        with self.env.registry.cursor() as cr:
+            api.Environment(cr, self.env.uid, {})["ir.config_parameter"].sudo().set_param(
+                key, value
+            )
+
+    @api.model
     def _close_stale_logs(self):
         """Runs still marked running died without finishing (the lock is free)."""
         message = _(
@@ -276,8 +290,13 @@ class KalkuSync(models.AbstractModel):
         }
         client = KalkuClient(settings["url"], settings["token"])
         try:
+            ping = client.ping()
+            previous = self._previous_source(source, ping) if source else None
+            if previous:
+                # Outside the savepoint and committed: survives whatever follows.
+                self._commit_param(PARAM_PENDING_PREVIOUS_SOURCE, previous)
             with self.env.cr.savepoint():
-                self._push(client, source, started, progress, settings)
+                self._push(client, source, previous, started, progress, settings)
                 client.complete(self._complete_payload(started, progress, "completed"))
         except KalkuAuthError as exc:
             # The token cannot write anything, not even the failure.
@@ -304,15 +323,17 @@ class KalkuSync(models.AbstractModel):
             params = self.env["ir.config_parameter"].sudo()
             params.set_param(PARAM_LAST_SYNC_SALES, fields.Datetime.to_string(started))
             params.set_param(PARAM_LAST_SYNC_SALES_SOURCE, source)
+            # Always on the side cursor: this transaction may predate the marker
+            # this very run committed, and would not see it to clear it.
+            self._commit_param(PARAM_PENDING_PREVIOUS_SOURCE, False)
         return self._finish(log_id, progress, "done")
 
     # Steps ------------------------------------------------------------------
 
-    def _push(self, client, source, started, progress, settings):
-        ping = client.ping()
+    def _push(self, client, source, previous, started, progress, settings):
         readers = self.env["kalku.readers"]
         if source:
-            self._push_sales(client, source, ping, progress)
+            self._push_sales(client, source, previous, progress)
         if settings["stock"]:
             self._push_snapshot(
                 client.push_inventory, "inventory", readers.read_stock(started.date()), progress
@@ -329,25 +350,26 @@ class KalkuSync(models.AbstractModel):
         """The source whose documents must leave Kalku before ``source`` loads.
 
         Kalku's ``sales_source_loaded`` says which source it holds, but it takes
-        the new source on the first request of a switch; the last source a run
-        confirmed here still names the old one when that switch was interrupted.
+        the new source on the first request of a switch. An interrupted switch
+        is still named by the pending marker, or by the last source a run
+        confirmed here.
         """
-        loaded = ping.get("sales_source_loaded")
-        if loaded in SALES_SOURCES and loaded != source:
-            return loaded
-        confirmed = self.env["ir.config_parameter"].sudo().get_param(
-            PARAM_LAST_SYNC_SALES_SOURCE
+        get = self.env["ir.config_parameter"].sudo().get_param
+        candidates = (
+            ping.get("sales_source_loaded"),
+            get(PARAM_PENDING_PREVIOUS_SOURCE),
+            get(PARAM_LAST_SYNC_SALES_SOURCE),
         )
-        if confirmed in SALES_SOURCES and confirmed != source:
-            return confirmed
+        for candidate in candidates:
+            if candidate in SALES_SOURCES and candidate != source:
+                return candidate
         return None
 
-    def _push_sales(self, client, source, ping, progress):
+    def _push_sales(self, client, source, previous, progress):
         readers = self.env["kalku.readers"]
         total = progress["datasets"].setdefault("sales", {})
         since = None if progress["sync_type"] == "full" else self._sales_since(source)
 
-        previous = self._previous_source(source, ping)
         if previous:
             # Orders and invoices are the same sales: retract every document of
             # the old source (the whole list again after an interruption; Kalku
