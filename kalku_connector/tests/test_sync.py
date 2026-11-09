@@ -26,6 +26,7 @@ INVENTORY = "/api/connector/inventory"
 SUPPLIER_TERMS = "/api/connector/supplier-terms"
 COMPLETE = "/api/connector/sync/complete"
 WATERMARK = "kalku.last_sync_at.sales"
+WATERMARK_SOURCE = "kalku.last_sync_source.sales"
 INACTIVE_OWNER = (
     "El usuario dueño de este token está inactivo. "
     "Genera un token nuevo en Kalku > Integraciones."
@@ -113,6 +114,10 @@ class KalkuSyncCase(KalkuFixtureCase):
         ) as self.sleep:
             return getattr(self.env["kalku.sync"], method)(**kwargs)
 
+    def set_watermark(self, value, source="orders"):
+        self.params.set_param(WATERMARK, value)
+        self.params.set_param(WATERMARK_SOURCE, source)
+
     def last_log(self):
         return self.env["kalku.sync.log"].search([], limit=1)
 
@@ -183,6 +188,7 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertEqual(json.loads(log.kalku_response), complete["datasets"])
         started = fields.Datetime.to_string(log.started_at)
         self.assertEqual(self.params.get_param(WATERMARK), started)
+        self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
         self.assertEqual(complete["started_at"], log.started_at.isoformat() + "+00:00")
 
     @requires_sale_stock
@@ -202,7 +208,7 @@ class TestKalkuSync(KalkuSyncCase):
 
     @requires_sale_stock
     def test_source_switch_sends_previous_source_retract(self):
-        self.params.set_param(WATERMARK, "2026-11-01 00:00:00")
+        self.set_watermark("2026-11-01 00:00:00")
         fake = FakeKalku(sales_source_loaded="invoices")
         log = self.sync(fake)
 
@@ -250,7 +256,7 @@ class TestKalkuSync(KalkuSyncCase):
     def test_auth_error_stops_and_keeps_watermark(self):
         self._second_order()
         self.configure(sync_stock="True", sync_supplier_terms="True")
-        self.params.set_param(WATERMARK, "2026-01-01 00:00:00")
+        self.set_watermark("2026-01-01 00:00:00")
         fake = FakeKalku(answers={(SALES, 2): response(401, {"message": INACTIVE_OWNER})})
         with patch.object(kalku_sync, "CHUNK_DOCUMENTS", 1):
             log = self.sync(fake)
@@ -274,7 +280,7 @@ class TestKalkuSync(KalkuSyncCase):
 
     @requires_sale_stock
     def test_other_error_reports_failed_run_and_keeps_watermark(self):
-        self.params.set_param(WATERMARK, "2026-01-01 00:00:00")
+        self.set_watermark("2026-01-01 00:00:00")
         refused = response(
             422,
             {
@@ -314,7 +320,7 @@ class TestKalkuSync(KalkuSyncCase):
 
     @requires_sale_stock
     def test_incremental_reads_since_watermark_minus_24h(self):
-        self.params.set_param(WATERMARK, "2026-11-05 10:00:00")
+        self.set_watermark("2026-11-05 10:00:00")
         Readers = type(self.env["kalku.readers"])
         with patch.object(
             Readers, "read_sales", autospec=True, side_effect=Readers.read_sales
@@ -327,8 +333,22 @@ class TestKalkuSync(KalkuSyncCase):
         self.assertEqual(log.state, "done")
 
     @requires_sale_stock
+    def test_watermark_of_another_source_reads_everything(self):
+        # A switch whose rows failed after Kalku already took the new source:
+        # ping no longer reports a switch, but the watermark is the old source's.
+        self.set_watermark("2026-11-05 10:00:00", source="invoices")
+        Readers = type(self.env["kalku.readers"])
+        with patch.object(
+            Readers, "read_sales", autospec=True, side_effect=Readers.read_sales
+        ) as read_sales:
+            log = self.sync(FakeKalku(sales_source_loaded="orders"))
+        self.assertIsNone(read_sales.call_args.args[2])
+        self.assertEqual(log.sync_type, "full")
+        self.assertEqual(self.params.get_param(WATERMARK_SOURCE), "orders")
+
+    @requires_sale_stock
     def test_full_sync_type_reads_everything(self):
-        self.params.set_param(WATERMARK, "2026-11-05 10:00:00")
+        self.set_watermark("2026-11-05 10:00:00")
         Readers = type(self.env["kalku.readers"])
         with patch.object(
             Readers, "read_sales", autospec=True, side_effect=Readers.read_sales

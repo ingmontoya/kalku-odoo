@@ -28,6 +28,8 @@ from .res_config_settings import (
 _logger = logging.getLogger(__name__)
 
 PARAM_LAST_SYNC_SALES = "kalku.last_sync_at.sales"
+# The source the watermark belongs to: another source starts from the beginning.
+PARAM_LAST_SYNC_SALES_SOURCE = "kalku.last_sync_source.sales"
 
 # Kalku's limits per request (ConnectorSalesRequest, ConnectorInventoryRequest,
 # ConnectorSupplierTermsRequest).
@@ -105,10 +107,16 @@ class KalkuSync(models.AbstractModel):
             raise UserError(_("Choose at least one dataset to send."))
 
     @api.model
-    def _sales_since(self):
-        """Start of the sales window: the watermark minus the overlap, or None."""
-        watermark = self.env["ir.config_parameter"].sudo().get_param(PARAM_LAST_SYNC_SALES)
-        if not watermark:
+    def _sales_source(self, settings):
+        return self.env["kalku.readers"].resolve_source(settings["source"] or "auto")
+
+    @api.model
+    def _sales_since(self, source):
+        """Start of the sales window: the watermark minus the overlap, or None
+        when no run of this source was ever confirmed."""
+        get = self.env["ir.config_parameter"].sudo().get_param
+        watermark = get(PARAM_LAST_SYNC_SALES)
+        if not watermark or get(PARAM_LAST_SYNC_SALES_SOURCE) != source:
             return None
         return fields.Datetime.from_string(watermark) - OVERLAP
 
@@ -130,9 +138,9 @@ class KalkuSync(models.AbstractModel):
         settings = self._settings()
         if not settings["sales"]:
             return True
-        readers = self.env["kalku.readers"]
-        source = readers.resolve_source(settings["source"])
-        return readers.count_sales(source, self._sales_since()) <= MAX_DOCUMENTS_IN_REQUEST
+        source = self._sales_source(settings)
+        count = self.env["kalku.readers"].count_sales(source, self._sales_since(source))
+        return count <= MAX_DOCUMENTS_IN_REQUEST
 
     @api.model
     def run_scheduled(self):
@@ -151,7 +159,8 @@ class KalkuSync(models.AbstractModel):
         settings = self._settings()
         self._check_configured(settings)
         ticked = self._ticked(settings)
-        if settings["sales"] and self._sales_since() is None:
+        source = self._sales_source(settings) if settings["sales"] else None
+        if source and self._sales_since(source) is None:
             sync_type = "full"
         started = fields.Datetime.now()
         log = self.env["kalku.sync.log"].sudo().create(
@@ -171,7 +180,7 @@ class KalkuSync(models.AbstractModel):
         client = KalkuClient(settings["url"], settings["token"])
         try:
             with self.env.cr.savepoint():
-                self._push(client, settings, started, progress)
+                self._push(client, settings, source, started, progress)
                 client.complete(self._complete_payload(started, progress, "completed"))
         except KalkuAuthError as exc:
             # The token cannot write anything, not even the failure.
@@ -190,19 +199,19 @@ class KalkuSync(models.AbstractModel):
                 _logger.info("Kalku did not record the failed run: %s", complete_exc)
             return self._finish(log, progress, "failed", message, errors)
 
-        if settings["sales"]:
-            self.env["ir.config_parameter"].sudo().set_param(
-                PARAM_LAST_SYNC_SALES, fields.Datetime.to_string(started)
-            )
+        if source:
+            params = self.env["ir.config_parameter"].sudo()
+            params.set_param(PARAM_LAST_SYNC_SALES, fields.Datetime.to_string(started))
+            params.set_param(PARAM_LAST_SYNC_SALES_SOURCE, source)
         return self._finish(log, progress, "done")
 
     # Steps ------------------------------------------------------------------
 
-    def _push(self, client, settings, started, progress):
+    def _push(self, client, settings, source, started, progress):
         ping = client.ping()
         readers = self.env["kalku.readers"]
-        if settings["sales"]:
-            self._push_sales(client, settings, ping, progress)
+        if source:
+            self._push_sales(client, source, ping, progress)
         if settings["stock"]:
             self._push_snapshot(
                 client.push_inventory, "inventory", readers.read_stock(started.date()), progress
@@ -215,11 +224,10 @@ class KalkuSync(models.AbstractModel):
                 progress,
             )
 
-    def _push_sales(self, client, settings, ping, progress):
+    def _push_sales(self, client, source, ping, progress):
         readers = self.env["kalku.readers"]
-        source = readers.resolve_source(settings["source"])
         total = progress["datasets"].setdefault("sales", {})
-        since = None if progress["sync_type"] == "full" else self._sales_since()
+        since = None if progress["sync_type"] == "full" else self._sales_since(source)
 
         loaded = ping.get("sales_source_loaded")
         if loaded in SALES_SOURCES and loaded != source:
