@@ -61,7 +61,7 @@ class TestKalkuReaders(KalkuFixtureCase):
     @requires_sale_stock
     def test_default_code_is_stripped(self):
         product = self.env["product.product"].create(
-            {"name": "Pantalón", "default_code": " CAM-009 ", "type": "consu", "is_storable": True}
+            {"name": "Pantalón", "default_code": " CAM-009 ", "detailed_type": "product"}
         )
         # The ORM keeps the spaces (only the web client trims), so the reader must strip.
         self.assertEqual(product.default_code, " CAM-009 ")
@@ -145,8 +145,7 @@ class TestKalkuReaders(KalkuFixtureCase):
         template = self.env["product.template"].create(
             {
                 "name": "Polo",
-                "type": "consu",
-                "is_storable": True,
+                "detailed_type": "product",
                 "attribute_line_ids": [
                     (0, 0, {"attribute_id": size.id, "value_ids": [(6, 0, size.value_ids.ids)]})
                 ],
@@ -180,7 +179,7 @@ class TestKalkuReaders(KalkuFixtureCase):
 
     def test_one_row_per_product_and_supplier(self):
         product = self.env["product.product"].create(
-            {"name": "Chaqueta", "default_code": "CAM-010", "type": "consu", "is_storable": True}
+            {"name": "Chaqueta", "default_code": "CAM-010", "detailed_type": "product"}
         )
         self._supplier_line(self.supplier_one, product, sequence=1, min_qty=0, price=100, delay=5)
         self._supplier_line(self.supplier_one, product, sequence=3, min_qty=100, price=90, delay=7)
@@ -199,7 +198,7 @@ class TestKalkuReaders(KalkuFixtureCase):
 
     def test_supplier_lines_out_of_dates_are_ignored(self):
         product = self.env["product.product"].create(
-            {"name": "Chaleco", "default_code": "CAM-011", "type": "consu", "is_storable": True}
+            {"name": "Chaleco", "default_code": "CAM-011", "detailed_type": "product"}
         )
         today = fields.Date.context_today(self.env.user)
         self._supplier_line(self.supplier_one, product, sequence=1, delay=1, date_end=today - timedelta(days=1))
@@ -212,7 +211,7 @@ class TestKalkuReaders(KalkuFixtureCase):
 
     def test_archived_suppliers_are_ignored(self):
         product = self.env["product.product"].create(
-            {"name": "Bufanda", "default_code": "CAM-012", "type": "consu", "is_storable": True}
+            {"name": "Bufanda", "default_code": "CAM-012", "detailed_type": "product"}
         )
         archived = self.env["res.partner"].create({"name": "Proveedor Archivado", "vat": "800555666"})
         archived_company = self.env["res.partner"].create(
@@ -233,10 +232,10 @@ class TestKalkuReaders(KalkuFixtureCase):
 
     def test_stock_ignores_goods_without_stock_tracking(self):
         self.env["product.product"].create(
-            {"name": "Bolsa", "type": "consu", "is_storable": False}
+            {"name": "Bolsa", "detailed_type": "consu"}
         )
         self.env["product.product"].create(
-            {"name": "Etiqueta", "default_code": "ETQ-001", "type": "consu", "is_storable": False}
+            {"name": "Etiqueta", "default_code": "ETQ-001", "detailed_type": "consu"}
         )
         result = self.readers().read_stock(date(2026, 11, 8))
         self.assertEqual(result["skipped"], self.fixture["inventory"]["skipped"])

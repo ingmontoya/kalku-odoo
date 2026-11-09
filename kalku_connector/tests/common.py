@@ -78,16 +78,16 @@ class KalkuFixtureCase(TransactionCase):
     def _create_products(cls):
         Product = cls.env["product.product"]
         cls.camisa = Product.create(
-            {"name": "Camisa", "default_code": "CAM-001", "type": "consu", "is_storable": True}
+            {"name": "Camisa", "default_code": "CAM-001", "detailed_type": "product"}
         )
         cls.camiseta = Product.create(
-            {"name": "Camiseta", "default_code": "CAM-002", "type": "consu", "is_storable": True}
+            {"name": "Camiseta", "default_code": "CAM-002", "detailed_type": "product"}
         )
         cls.no_code = Product.create(
-            {"name": "Producto sin referencia", "type": "consu", "is_storable": True}
+            {"name": "Producto sin referencia", "detailed_type": "product"}
         )
         cls.service = Product.create(
-            {"name": "Servicio de envío", "default_code": "SRV-001", "type": "service"}
+            {"name": "Servicio de envío", "default_code": "SRV-001", "detailed_type": "service"}
         )
 
     @classmethod

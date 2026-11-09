@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: odoo
       POSTGRES_DB: postgres
   odoo:
-    image: odoo:18
+    image: odoo:17
     depends_on:
       - db
     environment:

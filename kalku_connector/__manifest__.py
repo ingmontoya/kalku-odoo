@@ -1,6 +1,6 @@
 {
     "name": "Kalku Connector",
-    "version": "18.0.1.0.0",
+    "version": "17.0.1.0.0",
     "summary": "Send sales, stock and supplier lead times from Odoo to Kalku",
     "description": """
 Reads sales, stock and supplier lead times from Odoo and sends them to Kalku,
